@@ -1,7 +1,7 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const path = require('path');
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
@@ -11,6 +11,9 @@ const io = new Server(server, {
         methods: ["GET", "POST"]
     }
 });
+
+// Serve static files (HTML, JS, CSS)
+app.use(express.static(path.join(__dirname, "public")));
 
 const MAX_PLAYERS_PER_ROOM = 4;
 const MAX_ROOMS = 50; // Maximum number of rooms allowed
@@ -632,6 +635,8 @@ function checkGameOver(roomId) {
     });
 }
 
-server.listen(5000, () => {
-    console.log('Server is running on port 5000');
+// Use Render's dynamic port
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
