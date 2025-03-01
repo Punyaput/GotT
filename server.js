@@ -540,22 +540,22 @@ function startWave(roomId, waveNumber) {
             // Wave 1: Spawn 10 aliens, 0.5 seconds apart
             io.to(roomId).emit('alert_warning', "Wave 1 (10 enemies)");
             gameState[roomId].totalAliens = 10; // Total aliens for this wave
-            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 10, 1500, 1); // 10 Aliens, 500ms Delay, 1 Speed
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 10, 1500, 0.3); // 10 Aliens, 500ms Delay, 1 Speed
             break;
         case 2:
             io.to(roomId).emit('alert_warning', "Wave 2 (15 enemies)");
             gameState[roomId].totalAliens = 15;
-            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 15, 1200, 1.5);
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 15, 1200, 0.7);
             break;
         case 3:
             io.to(roomId).emit('alert_warning', "Wave 3 (20 enemies)");
             gameState[roomId].totalAliens = 20;
-            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 20, 1000, 2);
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 20, 1000, 1);
             break;
         case 4:
             io.to(roomId).emit('alert_warning', "Wave 4 (25 enemies)");
             gameState[roomId].totalAliens = 25;
-            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 25, 800, 3);
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 25, 800, 1.2);
             break;
         default:
             // If no more waves are defined, end the game
