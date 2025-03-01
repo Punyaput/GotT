@@ -540,25 +540,22 @@ function startWave(roomId, waveNumber) {
             // Wave 1: Spawn 10 aliens, 0.5 seconds apart
             io.to(roomId).emit('alert_warning', "Wave 1 (10 enemies)");
             gameState[roomId].totalAliens = 10; // Total aliens for this wave
-            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 10, 500, 1); // 4 = speed
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 10, 1500, 1); // 10 Aliens, 500ms Delay, 1 Speed
             break;
         case 2:
-            // Wave 2: Spawn 15 aliens, 0.4 seconds apart, faster movement
             io.to(roomId).emit('alert_warning', "Wave 2 (15 enemies)");
-            gameState[roomId].totalAliens = 15; // Total aliens for this wave
-            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 15, 400, 2); // 6 = speed
+            gameState[roomId].totalAliens = 15;
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 15, 1200, 1.5);
             break;
         case 3:
-            // Wave 3: Spawn 20 aliens, 0.3 seconds apart, even faster movement
             io.to(roomId).emit('alert_warning', "Wave 3 (20 enemies)");
-            gameState[roomId].totalAliens = 20; // Total aliens for this wave
-            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 20, 300, 3); // 8 = speed
+            gameState[roomId].totalAliens = 20;
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 20, 1000, 2);
             break;
         case 4:
-            // Wave 4: Spawn 25 aliens, 0.2 seconds apart, fastest movement
             io.to(roomId).emit('alert_warning', "Wave 4 (25 enemies)");
-            gameState[roomId].totalAliens = 25; // Total aliens for this wave
-            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 25, 200, 4); // 10 = speed
+            gameState[roomId].totalAliens = 25;
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 25, 800, 3);
             break;
         default:
             // If no more waves are defined, end the game
