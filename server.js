@@ -23,7 +23,7 @@ let availableRoomIds = Array.from({ length: MAX_ROOMS }, (_, i) => i + 1); // Po
 let gameState = {}; // Stores game state: {room_id: {aliens: [{id: string, word: string, position: {x: number, y: number}}], level: number, gameOver: boolean}}
 
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'client.html')); // Serve the HTML file
+    res.sendFile(path.join(__dirname, 'public', 'client.html')); // Serve the HTML file
 });
 
 io.on('connection', (socket) => {
