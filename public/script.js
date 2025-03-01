@@ -1,4 +1,6 @@
-const socket = io("http://localhost:5000");
+const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+const socket = io(backendUrl);
+
 let currentRoom = null;
 let playerName = "";
 let isReady = false; // Track the player's ready state
