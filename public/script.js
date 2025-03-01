@@ -1,5 +1,8 @@
-const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
-const socket = io(backendUrl);
+// Switch on for local development
+// const socket = io('http://localhost:5000');
+
+// Switch on for testing on Render
+const socket = io('https://gott-thqh.onrender.com/');
 
 let currentRoom = null;
 let playerName = "";
