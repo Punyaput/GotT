@@ -592,7 +592,26 @@ function spawnAlienWithDelay(roomId, count, delay, speed) {
 
 // Spawn an alien
 function spawnAlien(roomId, speed) {
-    const words = ["0", "1"]; // Example words
+    const words = [
+                  "OSI-Model", "Network", "Application", "Session", "Data-Link", "Transport",
+                  "Transmit", "Receive", "RS232", "Ethernet", "Hardware", "Software", "Protocol",
+                  "HTTP", "HTTPS", "MAC-Address", "Encoding", "Decoding", "Encryption", "Logical",
+                  "Sync", "Node", "Virtual-Network", "Routing", "Host", "Server", "Client",
+                  "WebSocket", "E-mail", "Data", "Packet", "Security", "Ring-Topology",
+                  "Bus-Topology", "Star-Topology", "Fully-Connected-Topology", "Combined-Topology",
+                  "ENIAC", "Telephone", "FiberOptic", "Cable", "Coaxial-Cable", "LAN", "WAN", "FAX",
+                  "Teleconference", "Satellite", "Microwave", "Wireless", "Wi-Fi", "ASCII",
+                  "MorseCode", "Bandwidth", "Frequency", "Signal", "Twisted-Pair", "Multiplexing",
+                  "Carrier", "Asynchronous", "Transmission", "Half-Duplex", "Full-Duplex", "Simplex",
+                  "Interface", "Modem", "Synchronous", "Clear-To-Send", "RS-449", "FDM", "TDM",
+                  "Frequency-Division-Multiplexing", "Time-Division-Multiplexing", "Ajarnjack",
+                  "Ajarnpiya", "Aloha-Protocol", "Huffman-Code", "Collision-Detection", "CSMA/CD",
+                  "Token", "CSMA", "Data-Compression", "192.168.1.1", "Security", "Data-Integrity",
+                  "Parity-Checking", "Error-Detection", "CRC", "Hamming-Code",
+                  "Cyclic-Redundancy-Checking", "Caesar-Cipher", "Cipher", "Key", "Distribution",
+                  "Protection", "Fire-Wall", "RSA", "Digital", "Analog", "Signatures", "Virus",
+                  "Worm", "Hacking", "6EB6957008E03CE4", "KDC", "Public-Key", "Private-Key"
+                  ]; // Example words
     const word = words[Math.floor(Math.random() * words.length)];
 
     const alien = {
