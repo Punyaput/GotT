@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Guardian of the Typurr - Lobby</title>
     <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -36,8 +36,11 @@
 
     <!-- Game Screen -->
     <div id="game-screen" style="display: none;">
-        <h1>Game</h1>
-        <div id="game-container"></div>
+        <!-- <h1>Game</h1> -->
+        <div id="game-container">
+            <!-- <div id="game-aliens-container"></div> add new when game start -->
+        </div>
+
         <div id="game-over-screen" style="display: none;">
             <h2>Game Over!</h2>
             <p id="countdown"></p>
