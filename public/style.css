@@ -6,7 +6,7 @@ body {
     background: linear-gradient(135deg, #1a1a2e, #16213e); /* Galaxy gradient */
     color: #fff;
     overflow: hidden;
-    height: calc(var(--vh, 1vh) * 100);
+    height: 100dvh;
 }
 
 h1, h2, h3 {
@@ -76,7 +76,7 @@ button:disabled {
     display: none;
     flex-direction: column;
     align-items: center;
-    height: 100dvh;
+    height: 100%;
     background: rgba(0, 0, 0, 0.7); /* Semi-transparent overlay */
     padding-right: 20px;
     padding-left: 20px;
@@ -111,7 +111,7 @@ button:disabled {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100dvh;
+    height: 100%;
     background: rgba(0, 0, 0, 0.7); /* Semi-transparent overlay */
 }
 #name-form h1 {
@@ -141,7 +141,7 @@ button:disabled {
     display: none;
     flex-direction: column;
     align-items: center;
-    height: 100dvh;
+    height: 100%;
     background: rgba(0, 0, 0, 0.7); /* Semi-transparent overlay */
 }
 #lobby h1 {
@@ -168,7 +168,7 @@ button:disabled {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100dvh;
+    height: 100%;
     background: rgba(0, 0, 0, 0.7); /* Semi-transparent overlay */
 }
 #game-screen h1 {
