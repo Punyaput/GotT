@@ -20,7 +20,7 @@ const MAX_ROOMS = 50; // Maximum number of rooms allowed
 let rooms = {}; // Stores room data: {room_id: {players: [player_ids], ready_count: int, head: player_id}}
 let players = {}; // Stores player data: {player_id: {name: string, room_id: string, ready: boolean}}
 let availableRoomIds = Array.from({ length: MAX_ROOMS }, (_, i) => i + 1); // Pool of available room IDs
-let gameState = {}; // Stores game state: {room_id: {aliens: [{id: string, word: string, position: {x: number, y: number}}], level: number, gameOver: boolean}}
+let gameState = {}; // Stores game state: {room_id: {aliens: [{id: string, word: string, position: {x: number, y: number}, speed: int}], waveNumber: int, waveStarted: boolean, alienSpawned: int, alienDestroyed: int, gameOver: boolean}}
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'client.html')); // Serve the HTML file
@@ -267,7 +267,6 @@ io.on('connection', (socket) => {
             // Initialize game state
             gameState[roomId] = {
                 aliens: [],
-                level: 1,
                 waveNumber: 1, // Initialize waveNumber to 1
                 waveStarted: false,
                 gameOver: false,
@@ -540,22 +539,22 @@ function startWave(roomId, waveNumber) {
             // Wave 1: Spawn 10 aliens, 0.5 seconds apart
             io.to(roomId).emit('alert_warning', "Wave 1 (10 enemies)");
             gameState[roomId].totalAliens = 10; // Total aliens for this wave
-            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 10, 1500, 0.3); // 10 Aliens, 500ms Delay, 1 Speed
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 10, 1500, 1); // 10 Aliens, 500ms Delay, 1 Speed
             break;
         case 2:
             io.to(roomId).emit('alert_warning', "Wave 2 (15 enemies)");
             gameState[roomId].totalAliens = 15;
-            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 15, 1200, 0.7);
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 15, 1200, 1.5);
             break;
         case 3:
             io.to(roomId).emit('alert_warning', "Wave 3 (20 enemies)");
             gameState[roomId].totalAliens = 20;
-            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 20, 1000, 1);
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 20, 1000, 2);
             break;
         case 4:
             io.to(roomId).emit('alert_warning', "Wave 4 (25 enemies)");
             gameState[roomId].totalAliens = 25;
-            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 25, 800, 1.2);
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 25, 800, 3);
             break;
         default:
             // If no more waves are defined, end the game
@@ -614,7 +613,7 @@ function spawnAlien(roomId, speed) {
     const alien = {
         id: `alien_${Date.now()}`,
         word: word,
-        position: { x: Math.random() * 700, y: 0 }, // Random x position at the top
+        position: { x: Math.random() * (0.88 - 0.12) + 0.12, y: 0 }, // Random x position at the top
         speed: speed // Add speed to the alien object
     };
 
@@ -629,7 +628,7 @@ function spawnAlien(roomId, speed) {
 // Move aliens
 function moveAliens(roomId) {
     gameState[roomId].aliens.forEach(alien => {
-        alien.position.y += alien.speed; // Use the alien's speed to move it down
+        alien.position.y += alien.speed * 0.1; // Use the alien's speed to move it down
 
         // Emit the updated alien position to all players in the room
         io.to(roomId).emit('alien_moved', { id: alien.id, position: alien.position });
@@ -638,7 +637,7 @@ function moveAliens(roomId) {
 
 // Check for game over
 function checkGameOver(roomId) {
-    const gameOverLine = 480; // 20% from the bottom (600px * 0.8)
+    const gameOverLine = 100; // Approximately crosses the game-over line
 
     gameState[roomId].aliens.forEach(alien => {
         if (alien.position.y >= gameOverLine) {
