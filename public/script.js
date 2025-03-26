@@ -197,8 +197,11 @@ socket.on("game_started", (data) => {
     // Draw the game-over line
     const gameContainer = document.getElementById("game-container");
     const gameOverLine = document.createElement("div");
+    const gameAliensContainer = document.createElement("div");
     gameOverLine.id = "game-over-line";
+    gameAliensContainer.id = "game-aliens-container";
     gameContainer.appendChild(gameOverLine);
+    gameContainer.appendChild(gameAliensContainer);
 
     // Add the input box
     const inputBox = document.createElement("input");
@@ -254,10 +257,10 @@ socket.on("alien_spawned", (alien) => {
     const alienElement = document.createElement("div");
     alienElement.id = alien.id;
     alienElement.className = "alien";
-    alienElement.style.left = `${alien.position.x}px`;
+    alienElement.style.left = `${alien.position.x * document.getElementById("game-container").clientWidth * 0.8}px`;
     alienElement.style.top = `${alien.position.y}px`;
     alienElement.textContent = alien.word;
-    document.getElementById("game-container").appendChild(alienElement);
+    document.getElementById("game-aliens-container").appendChild(alienElement);
 
     // Create Body
     const alienBody = document.createElement("div");
@@ -270,7 +273,7 @@ socket.on("alien_spawned", (alien) => {
 socket.on("alien_moved", (data) => {
     const alienElement = document.getElementById(data.id);
     if (alienElement) {
-        alienElement.style.top = `${data.position.y}px`;
+        alienElement.style.top = `${data.position.y}%`;
     }
 });
 
