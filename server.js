@@ -369,6 +369,8 @@ io.on('connection', (socket) => {
             // Delete the room
             delete rooms[roomId];
             delete gameState[roomId];
+
+            socket.leave(roomId);
     
             console.log(`Room ${roomId} deleted and all players returned to lobby.`);
         }
