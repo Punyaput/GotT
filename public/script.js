@@ -527,9 +527,10 @@ function printAll() {
 //     }
 // }
 
-// function updateHeight() {
-//     document.documentElement.style.setProperty('--vh', window.innerHeight * 0.01 + 'px');
-// }
-
-// window.addEventListener('resize', updateHeight);
-// updateHeight(); // Run on load
+function adjustHeight() {
+    const doc = document.documentElement;
+    doc.style.setProperty('--actual-height', `${window.innerHeight}px`);
+  }
+  
+window.addEventListener('resize', adjustHeight);
+adjustHeight();
