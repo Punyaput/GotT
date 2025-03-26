@@ -6,6 +6,7 @@ body {
     background: linear-gradient(135deg, #1a1a2e, #16213e); /* Galaxy gradient */
     color: #fff;
     overflow: hidden;
+    height: calc(var(--vh, 1vh) * 100);
 }
 
 h1, h2, h3 {
