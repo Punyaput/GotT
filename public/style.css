@@ -6,7 +6,7 @@ body {
     background: linear-gradient(135deg, #1a1a2e, #16213e); /* Galaxy gradient */
     color: #fff;
     overflow: hidden;
-    height: var(--actual-height);
+    height: 100svh;
 }
 
 h1, h2, h3 {
@@ -15,6 +15,7 @@ h1, h2, h3 {
     text-shadow: 0 0 10px #e94560, 0 0 20px #e94560; /* Glow effect */
     justify-self: center;
 }
+
 .room-container {
     display: flex;
     flex-wrap: wrap;
@@ -102,9 +103,28 @@ button:disabled {
     width: 300px;
     box-shadow: 0 0 10px rgba(233, 69, 96, 0.5); /* Glow effect */
 }
-.player-name {
+#player-name {
+    max-width: auto;
     font-weight: bold;
 }
+
+/* Media query for very small screens */
+@media (max-width: 445px) {
+    .name-and-play-container {
+        display: flex;
+        flex-direction: column; /* Stack vertically on small screens */
+        align-items: center; /* Center items vertically */
+        width: 90%;
+    }
+    .name-and-play-container button {
+        width: 40%;
+    }
+    #player-name {
+        width: 70%;  /* Scale down to 90% of the container width */
+        max-width: 90%;  /* Don't let them get too wide */
+    }
+  }
+
 /* Name form */
 #name-form {
     display: flex;
@@ -115,7 +135,7 @@ button:disabled {
     background: rgba(0, 0, 0, 0.7); /* Semi-transparent overlay */
 }
 #name-form h1 {
-    font-size: calc(2vw + 20px);
+    font-size: clamp(20px, 6vw, 40px);
     margin-bottom: 20px;
     text-wrap: nowrap;
 }
@@ -134,6 +154,7 @@ button:disabled {
     color: #aaa;
 }
 .name-and-play-container button {
+
     margin-left: 10px;
 }
 /* Lobby */
