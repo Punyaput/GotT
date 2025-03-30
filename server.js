@@ -52,7 +52,7 @@ io.on('connection', (socket) => {
         }
 
         // Assign the smallest available room ID
-        const roomId = `room_${availableRoomIds.shift()}`;
+        const roomId = `Room ${availableRoomIds.shift()}`;
         rooms[roomId] = { players: [playerId], ready_count: 0, head: playerId, game_in_progress: false }; // Set the room creator as the head
         players[playerId].room_id = roomId;
 
@@ -133,7 +133,7 @@ io.on('connection', (socket) => {
             if (rooms[roomId].players.length === 0) { // Delete room if empty
                 delete rooms[roomId];
                 // Return the room ID to the pool
-                const roomNumber = parseInt(roomId.split('_')[1]);
+                const roomNumber = parseInt(roomId.split(' ')[1]);
                 availableRoomIds.push(roomNumber);
                 availableRoomIds.sort((a, b) => a - b); // Keep the pool sorted
             }
@@ -538,25 +538,30 @@ function startWave(roomId, waveNumber) {
 
     switch (waveNumber) {
         case 1:
-            // Wave 1: Spawn 10 aliens, 0.5 seconds apart
             io.to(roomId).emit('alert_warning', "Wave 1 (10 enemies)");
             gameState[roomId].totalAliens = 10; // Total aliens for this wave
-            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 10, 1500, 1); // 10 Aliens, 500ms Delay, 1 Speed
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 10, 1500, 1); // roomId, amount, delayMS, speedEach
             break;
         case 2:
-            io.to(roomId).emit('alert_warning', "Wave 2 (15 enemies)");
-            gameState[roomId].totalAliens = 15;
-            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 15, 1200, 1.5);
+            io.to(roomId).emit('alert_warning', "Wave 2 (20 enemies)");
+            gameState[roomId].totalAliens = 20;
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 20, 1200, 1.5);
             break;
         case 3:
-            io.to(roomId).emit('alert_warning', "Wave 3 (20 enemies)");
-            gameState[roomId].totalAliens = 20;
-            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 20, 1000, 2);
+            io.to(roomId).emit('alert_warning', "Wave 3 (25 enemies)");
+            gameState[roomId].totalAliens = 25;
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 25, 1000, 2);
             break;
         case 4:
-            io.to(roomId).emit('alert_warning', "Wave 4 (25 enemies)");
-            gameState[roomId].totalAliens = 25;
-            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 25, 800, 3);
+            io.to(roomId).emit('alert_warning', "Wave 4 (30 enemies)");
+            gameState[roomId].totalAliens = 30;
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 30, 800, 3);
+            break;
+        case 5:
+            io.to(roomId).emit('alert_warning', "BOSS WAVE (FINAL)");
+            gameState[roomId].totalAliens = 150;
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 50, 100, 3);
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 100, 50, 4);
             break;
         default:
             // If no more waves are defined, end the game
@@ -593,29 +598,31 @@ function spawnAlien(roomId, speed) {
     const words = [
                   "OSI-Model", "Network", "Application", "Session", "Data-Link", "Transport",
                   "Transmit", "Receive", "RS232", "Ethernet", "Hardware", "Software", "Protocol",
-                  "HTTP", "HTTPS", "MAC-Address", "Encoding", "Decoding", "Encryption", "Logical",
-                  "Sync", "Node", "Virtual-Network", "Routing", "Host", "Server", "Client",
-                  "WebSocket", "E-mail", "Data", "Packet", "Security", "Ring-Topology",
-                  "Bus-Topology", "Star-Topology", "Fully-Connected-Topology", "Combined-Topology",
-                  "ENIAC", "Telephone", "FiberOptic", "Cable", "Coaxial-Cable", "LAN", "WAN", "FAX",
+                  "HTTP", "HTTPS", "Encoding", "Decoding", "Encryption", "Logical",
+                  "Sync", "Node", "Routing", "Host", "Server", "Client",
+                  "WebSocket", "E-mail", "Data", "Packet", "Security", "Ring",
+                  "Bus", "ENIAC", "Telephone", "FiberOptic", "Cable", "Coaxial-Cable", "LAN", "WAN", "FAX",
                   "Teleconference", "Satellite", "Microwave", "Wireless", "Wi-Fi", "ASCII",
                   "MorseCode", "Bandwidth", "Frequency", "Signal", "Twisted-Pair", "Multiplexing",
                   "Carrier", "Asynchronous", "Transmission", "Half-Duplex", "Full-Duplex", "Simplex",
-                  "Interface", "Modem", "Synchronous", "Clear-To-Send", "RS-449", "FDM", "TDM",
-                  "Frequency-Division-Multiplexing", "Time-Division-Multiplexing", "Ajarnjack",
-                  "Ajarnpiya", "Aloha-Protocol", "Huffman-Code", "Collision-Detection", "CSMA/CD",
-                  "Token", "CSMA", "Data-Compression", "192.168.1.1", "Security", "Data-Integrity",
-                  "Parity-Checking", "Error-Detection", "CRC", "Hamming-Code",
-                  "Cyclic-Redundancy-Checking", "Caesar-Cipher", "Cipher", "Key", "Distribution",
-                  "Protection", "Fire-Wall", "RSA", "Digital", "Analog", "Signatures", "Virus",
-                  "Worm", "Hacking", "6EB6957008E03CE4", "KDC", "Public-Key", "Private-Key"
+                  "Interface", "Modem", "Synchronous", "Send", "FDM", "TDM",
+                  "Ajarnjack", "Ajarnpiya", "Aloha", "Huffman-Code", "Collision", "CSMA/CD",
+                  "Token", "CSMA", "Data-Compression", "192.168.1.1", "Security", "Integrity",
+                  "Parity-Checking", "Error", "CRC", "Hamming-Code",
+                  "CRC", "Caesar-Cipher", "Cipher", "Key", "Distribution",
+                  "Protection", "Firewall", "RSA", "Digital", "Analog", "Signatures", "Virus",
+                  "Hacking", "Public-Key", "Private-Key", "IP", "TCP", "Handshake", "Cable", "Switch",
+                  "Buffer", "Frame", "Ping", "Bitrate", "Bandwidth", "Bridge", "Network", "Traffic", "Port", "Node",
+                  "Proxy", "URL", "MAC", "Gateway", "DDoS", "DoS", "Host", "Server", "Peer", "Server", "0", "1",
+                  "5G", "4G", "ISP", "Dijkstra", "Session", "Route", "Bluetooth", "UDP", "Sliding-Window", "Connection",
+                  "Sensor", "Repeater", "Media", "Frequency", "Period", "Analog", "Digital", "Morse"
                   ]; // Example words
     const word = words[Math.floor(Math.random() * words.length)];
 
     const alien = {
         id: `alien_${Date.now()}`,
         word: word,
-        position: { x: Math.random() * (0.88 - 0.12) + 0.12, y: 0 }, // Random x position at the top
+        position: { x: Math.random() * 100, y: 0 }, // Random x position at the top
         speed: speed // Add speed to the alien object
     };
 
