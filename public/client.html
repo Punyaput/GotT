@@ -12,6 +12,7 @@
 </head>
 <body>
     <div id="name-form">
+        <div class="first-logo">logo</div>
         <h1>Guardian of the Typurr</h1>
         <div class="name-and-play-container">
             <input type="text" autocomplete="off" id="player-name" placeholder="Enter your name">
@@ -26,12 +27,12 @@
 
         <div id="game-room">
             <h2 id="room-title"></h2>
+            <div class="ready-and-exit-btns">
+                <button id="exit-button" onclick="exitRoom()">Exit Room</button>
+                <button id="ready-button" onclick="readyUp()">Ready</button>
+            </div>
             <div class="player-list" id="player-list"></div>
-            <button id="ready-button" onclick="readyUp()">Ready</button>
-            <button id="exit-button" onclick="exitRoom()">Exit Room</button>
         </div>
-
-        <button onclick="printAll()">PRINT ALL</button>
     </div>
 
     <!-- Game Screen -->
