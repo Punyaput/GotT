@@ -111,7 +111,7 @@ socket.on("room_list", (rooms) => {
 
 socket.on("joined_room", (roomId) => {
     currentRoom = roomId;
-    document.getElementById("room-title").innerText = `Room - ${roomId}`;
+    document.getElementById("room-title").innerText = `${roomId}`;
     isHead = false; // Joined player is never the head
     updateLobbyVisibility();
 });
@@ -140,17 +140,34 @@ socket.on("player_list", (players) => {
 
         // Add kick button for the head (only if the current player is the head and the target is not themselves)
         const kickButton = isHead && player.id !== socket.id
-            ? `<span class="kick-button" onclick="kickPlayer('${player.id}')">🚫</span>`
+            ? `<div class="kick-button" onclick="kickPlayer('${player.id}')">❌</div>`
             : "";
+        const crownDisplay = player.is_head 
+            ? `<div class="crown-display">👑</div>`
+            : "";
+        const blankButton = !player.is_head && !isHead
+            ? `<div class="blank-button"></div>`
+            : "";
+        const chosenCatIcon = `<div class="chosen-cat"></div>`
 
         playerDiv.innerHTML = `
-            <span class="player-name">${player.name} ${player.is_head ? "👑" : ""}</span>
+            ${chosenCatIcon}
+            <div class="player-name">${player.name}</div>
+            <div id="ready-state" class="${player.ready ? "player-ready" : "player-not-ready"}">${player.ready ? "Ready" : "Await"}</div>
             ${kickButton}
-            <span class="${player.ready ? "player-ready" : "player-not-ready"}">${player.ready ? "Ready" : "Not Ready"}</span>
+            ${crownDisplay}
+            ${blankButton}
         `;
-
         playerList.appendChild(playerDiv);
+        
+        if (player.id == socket.id) {
+            const characterSelection = document.createElement("div");
+            characterSelection.classList.add("character-selection");
+            playerList.appendChild(characterSelection);
+            console.log('s')
+        }
     });
+    
 
     updateReadyButton(); // Update the button based on head status and ready state
 });
@@ -160,7 +177,7 @@ socket.on("kicked_from_room", () => {
         toast: true,
         icon: "error",
         title: "You've been kicked out of a room!", 
-        position: "top-end",
+        position: "top",
         background: "#ff4b2b",
         color: "#fff",
         showConfirmButton: false,
@@ -177,7 +194,7 @@ socket.on("game_started", (data) => {
         toast: true,
         icon: "warning",
         title: "Game started in" + currentRoom,
-        position: "top-end",
+        position: "top",
         background: "#ffff00",
         color: "#000",
         showConfirmButton: false,
@@ -206,8 +223,8 @@ socket.on("game_started", (data) => {
     // Add the input box
     const inputBox = document.createElement("input");
     inputBox.id = "input-box";
-    inputBox.autocomplete = "new-password"; // new-password autocomplete disable t
-    inputBox.placeholder = "Type a word and press Enter";
+    inputBox.autocomplete = "off"; // new-password autocomplete disable t
+    inputBox.placeholder = "Type words here!";
     gameContainer.appendChild(inputBox);
 
     // Add input box event listener
@@ -257,10 +274,12 @@ socket.on("alien_spawned", (alien) => {
     const alienElement = document.createElement("div");
     alienElement.id = alien.id;
     alienElement.className = "alien";
-    alienElement.style.left = `${alien.position.x * document.getElementById("game-container").clientWidth * 0.8}px`;
+    if (alien.position.x > 90) {alienElement.style.left = `calc(${alien.position.x}% - 22.5px - 17%)`;}
+    else if (alien.position.x < 10) {alienElement.style.left = `calc(${alien.position.x}% - 22.5px + 17%)`;}
+    else {alienElement.style.left = `calc(${alien.position.x}% - 22.5px)`;}
     alienElement.style.top = `${alien.position.y}px`;
     alienElement.textContent = alien.word;
-    document.getElementById("game-aliens-container").appendChild(alienElement);
+    document.getElementById("game-aliens-container").prepend(alienElement);
 
     // Create Body
     const alienBody = document.createElement("div");
@@ -480,7 +499,7 @@ socket.on("error", (data) => {
         toast: true,
         icon: "error",
         title: data.message, 
-        position: "top-end",
+        position: "top",
         background: "#ff4b2b",
         color: "#fff",
         showConfirmButton: false,
@@ -493,13 +512,14 @@ socket.on("alert_warning", (message) => {
         toast: true,
         icon: "warning",
         title: message,
-        position: "top-end",
+        position: "top",
         background: "#ffff00",
         color: "#000",
         showConfirmButton: false,
-        timer: 3000,
+        timer: 1500,
     });
 });
+
 
 socket.emit("get_rooms");
 
@@ -526,11 +546,3 @@ function printAll() {
 //         });
 //     }
 // }
-
-function adjustHeight() {
-    const doc = document.documentElement;
-    doc.style.setProperty('--actual-height', `${window.innerHeight}px`);
-  }
-  
-window.addEventListener('resize', adjustHeight);
-adjustHeight();
