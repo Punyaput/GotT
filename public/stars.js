@@ -2,6 +2,7 @@
 function createStars() {
     const starContainer = document.createElement("div");
     starContainer.className = "star-container";
+    starContainer.id = "star-container"
 
     // Number of stars to create
     const numStars = 200;
