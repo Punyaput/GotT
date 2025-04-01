@@ -11,12 +11,8 @@ let isHead = false; // Track if the player is the head
 let currentWord = ""; // Track the current word being typed
 let playerElements = {}; // Store player elements for updating positions
 
-// // DOM Elements
-// const nameForm = document.getElementById("name-form");
-// const lobby = document.getElementById("lobby");
-// const gameScreen = document.getElementById("game-screen");
-// const gameContainer = document.getElementById("game-container");
-// const gameOverScreen = document.getElementById("game-over-screen");
+let characters = ["Nulla", "Jacky", "Pewya", "Nutty", "Yoda", "Arthur", "Power", "Tuxedo"];
+let currentIndex = 0;
 
 function setName() {
     playerName = document.getElementById("player-name").value;
@@ -148,7 +144,7 @@ socket.on("player_list", (players) => {
         const blankButton = !player.is_head && !isHead
             ? `<div class="blank-button"></div>`
             : "";
-        const chosenCatIcon = `<div class="chosen-cat"></div>`
+        const chosenCatIcon = `<div class="chosen-cat" id="chosen-cat-${player.id}"> <img class="character-image2" src="./images/${player.character}TN2.png"> </div>`
 
         playerDiv.innerHTML = `
             ${chosenCatIcon}
@@ -159,18 +155,72 @@ socket.on("player_list", (players) => {
             ${blankButton}
         `;
         playerList.appendChild(playerDiv);
+        // socket.emit('retrieve_character');
         
         if (player.id == socket.id) {
             const characterSelection = document.createElement("div");
             characterSelection.classList.add("character-selection");
             playerList.appendChild(characterSelection);
-            console.log('s')
+
+            characterSelection.innerHTML = 
+            `<div class="character-container">
+                <div class="character fade-in" id="character"> <img id="character-image1" class="character-image1" src="./images/${characters[currentIndex]}TN1.png"></div>
+            </div>
+            <div class="arrow left" onclick="prevCharacter()">&#9664;</div>
+            <div class="arrow right" onclick="nextCharacter()">&#9654;</div>
+            <button class="select-btn" onclick="selectCharacter()">Select</button>`;
         }
     });
-    
-
     updateReadyButton(); // Update the button based on head status and ready state
 });
+
+socket.on('character_changed', (data) => {
+    chosenCharacter = data.character;
+    document.getElementById("chosen-cat-" + data.id).innerHTML = `<img class="character-image2" src="./images/${data.character}TN2.png">`
+});
+
+function updateCharacter(direction) {
+    document.getElementById("character").classList.remove("fade-in");
+    document.getElementById("character").classList.add(direction === 'left' ? "fade-out-left" : "fade-out-right");
+    
+    setTimeout(() => {
+        document.getElementById("character").textContent = characters[currentIndex];
+        document.getElementById("character").innerHTML = `<img id="character-image1" class="character-image1">`
+        document.getElementById("character").classList.remove("fade-out-left", "fade-out-right");
+        document.getElementById("character").classList.add("fade-in");
+        changeCharacterBG1(characters[currentIndex]);
+    }, 300);
+}
+
+function prevCharacter() {
+    currentIndex = (currentIndex - 1 + characters.length) % characters.length;
+    updateCharacter('left');
+}
+
+function nextCharacter() {
+    currentIndex = (currentIndex + 1) % characters.length;
+    updateCharacter('right');
+}
+
+function changeCharacterBG1(character) {
+    document.getElementById("character-image1").src = "./images/" + character + "TN1.png";
+}
+
+function selectCharacter() {
+
+    socket.emit("change_character", characters[currentIndex])
+
+    Swal.fire({
+        toast: true,
+        icon: "success",
+        title: "Selected " + characters[currentIndex],
+        position: "top",
+        background: "#00CC00",
+        color: "#000",
+        showConfirmButton: false,
+        timer: 1500,
+    });
+}
 
 socket.on("kicked_from_room", () => {
     Swal.fire({
@@ -234,29 +284,30 @@ socket.on("game_started", (data) => {
         submitWord();
     }
 
-    // handleKeyboardVisibility();
+    });
+
+    // Add and update player squares
+    updatePlayerPositions(data.players);
 });
 
-    updatePlayerPositions(data.players);
+socket.on("update_player_characters", (data) => {
 
+    data.forEach((player) => {
+        document.getElementById("igchar-" + player.id).src = "./images/" + player.character + "TN2.png";
+        document.getElementById("player-" + player.id).classList.add("bg-color-" + player.character);
+    });
 });
 
 // Handle word submission response
 socket.on("word_submitted", (data) => {
-    const { playerId, word, isCorrect, alienId } = data;
+    const { playerId, word, isCorrect, alienId, character } = data;
     const wordDisplay = document.getElementById(`word-display-${playerId}`);
-
-    // console.log('Updated ' + playerId + ' container to ' + word)
-    // if (wordDisplay) {
-    //     wordDisplay.innerText = word;
-    // }
-
     // Update the word display color
     updateWordDisplayColor(playerId, isCorrect);
 
     // If the word is correct, draw a laser beam to the alien
     if (isCorrect) {
-        drawLaserBeam(playerId, alienId);
+        drawLaserBeam(playerId, alienId, character);
     }
 });
 
@@ -274,9 +325,13 @@ socket.on("alien_spawned", (alien) => {
     const alienElement = document.createElement("div");
     alienElement.id = alien.id;
     alienElement.className = "alien";
-    if (alien.position.x > 90) {alienElement.style.left = `calc(${alien.position.x}% - 22.5px - 17%)`;}
-    else if (alien.position.x < 10) {alienElement.style.left = `calc(${alien.position.x}% - 22.5px + 17%)`;}
-    else {alienElement.style.left = `calc(${alien.position.x}% - 22.5px)`;}
+    
+    setTimeout(() => {
+        const alienWordRect = alienElement.getBoundingClientRect();
+        const xpos = Math.max(0, Math.min(alien.position.x, 100 - ((alienWordRect.width / window.innerWidth) * 100)));
+        alienElement.style.left = `${xpos}%`;
+    }, 0);
+
     alienElement.style.top = `${alien.position.y}px`;
     alienElement.textContent = alien.word;
     document.getElementById("game-aliens-container").prepend(alienElement);
@@ -323,6 +378,12 @@ function updatePlayerPositions(players) {
         const playerElement = document.createElement("div");
         playerElement.className = "player-square";
         playerElement.id = `player-${player}`;
+
+        // Character image
+        const characterImgInGame = document.createElement("img");
+        characterImgInGame.className = "character-image3";
+        characterImgInGame.id = `igchar-${player}`;
+        playerElement.appendChild(characterImgInGame);
 
         // Add word display above the player
         const wordDisplay = document.createElement("div");
@@ -393,7 +454,7 @@ function updateWordDisplay(playerId, word) {
 }
 
 // Function to draw a laser beam from a player to an alien
-function drawLaserBeam(playerId, alienId) {
+function drawLaserBeam(playerId, alienId, character) {
     const playerElement = document.getElementById(`player-${playerId}`);
     const alienElement = document.getElementById(alienId);
     const gameContainer = document.getElementById("game-container");
@@ -407,7 +468,7 @@ function drawLaserBeam(playerId, alienId) {
 
     // Calculate the positions relative to the game container
     const playerX = playerRect.left - gameRect.left + playerRect.width / 2;
-    const playerY = playerRect.top - gameRect.top + playerRect.height / 2;
+    const playerY = playerRect.top - gameRect.top + playerRect.height / 2 - 52;
     const alienX = alienRect.left - gameRect.left + alienRect.width / 2;
     const alienY = alienRect.top - gameRect.top + alienRect.height / 2 + 50;
 
@@ -420,6 +481,7 @@ function drawLaserBeam(playerId, alienId) {
     // Create the laser beam element
     const laserBeam = document.createElement("div");
     laserBeam.className = "laser-beam";
+    laserBeam.classList.add("laser-color-" + character)
     laserBeam.style.width = `${distance}px`;
     laserBeam.style.left = `${playerX}px`;
     laserBeam.style.top = `${playerY}px`;
@@ -527,22 +589,17 @@ function printAll() {
     socket.emit('print_all')
 }
 
-// // Function to handle keyboard visibility on mobile devices
-// function handleKeyboardVisibility() {
-//     const inputBox = document.getElementById("input-box");
-//     const gameContainer = document.getElementById("game-container");
+function adjustHeight() {
+    document.body.style.height = `${window.visualViewport.height}px`;
+}
 
-//     if (inputBox && gameContainer) {
-//         inputBox.addEventListener("focus", () => {
-//             // When the input box is focused (keyboard visible), adjust the layout
-//             gameContainer.style.height = "70vh"; // Reduce game container height
-//             document.getElementById("player-container").style.bottom = "25%"; // Move players up
-//         });
+function howToPlay() {
+    console.log("not implemented yet");
+}
 
-//         inputBox.addEventListener("blur", () => {
-//             // When the input box loses focus (keyboard hidden), reset the layout
-//             gameContainer.style.height = "100vh"; // Restore game container height
-//             document.getElementById("player-container").style.bottom = "10%"; // Move players back down
-//         });
-//     }
-// }
+function leaderBoard() {
+    console.log("not implemented yet");
+}
+
+window.visualViewport.addEventListener("resize", adjustHeight);
+window.visualViewport.addEventListener("scroll", adjustHeight);
