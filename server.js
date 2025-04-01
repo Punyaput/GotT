@@ -18,7 +18,7 @@ app.use(express.static(path.join(__dirname, "public")));
 const MAX_PLAYERS_PER_ROOM = 4;
 const MAX_ROOMS = 50; // Maximum number of rooms allowed
 let rooms = {}; // Stores room data: {room_id: {players: [player_ids], ready_count: int, head: player_id}}
-let players = {}; // Stores player data: {player_id: {name: string, room_id: string, ready: boolean}}
+let players = {}; // Stores player data: {player_id: {name: string, room_id: string, ready: boolean, character: string}}
 let availableRoomIds = Array.from({ length: MAX_ROOMS }, (_, i) => i + 1); // Pool of available room IDs
 let gameState = {}; // Stores game state: {room_id: {aliens: [{id: string, word: string, position: {x: number, y: number}, speed: int}], waveNumber: int, waveStarted: boolean, alienSpawned: int, alienDestroyed: int, gameOver: boolean}}
 
@@ -28,13 +28,24 @@ app.get('/', (req, res) => {
 
 io.on('connection', (socket) => {
     const playerId = socket.id;
-    players[playerId] = { name: "", room_id: null, ready: false }; // Initialize player data
+    players[playerId] = { name: "", room_id: null, ready: false , character: "Nulla" }; // Initialize player data
     console.log(`Player ${playerId} connected.`);
 
     socket.on('set_name', (data) => {
         players[playerId].name = data.name;
         socket.emit('name_set', { name: data.name });
     });
+
+    socket.on('change_character', (character) => {
+        const roomId = players[playerId].room_id
+        players[playerId].character = character;
+        io.to(roomId).emit('character_changed', { id : playerId, character : character});
+    });
+
+    // socket.on('retrieve_character', (data) => {
+    //     const roomId = players[playerId].room_id
+    //     io.to(roomId).emit('character_changed', { id : playerId, character : players[playerId].character});
+    // });
 
     socket.on('get_rooms', () => {
         updateRoomList();
@@ -134,6 +145,7 @@ io.on('connection', (socket) => {
                 delete rooms[roomId];
                 // Return the room ID to the pool
                 const roomNumber = parseInt(roomId.split(' ')[1]);
+                // console.log("returning room " + roomNumber);
                 availableRoomIds.push(roomNumber);
                 availableRoomIds.sort((a, b) => a - b); // Keep the pool sorted
             }
@@ -278,6 +290,13 @@ io.on('connection', (socket) => {
             startGameLoop(roomId);
 
             io.to(roomId).emit('game_started', rooms[roomId]);
+
+            const characterList = rooms[roomId].players.map(playerId => ({
+                id: playerId,
+                character: players[playerId].character
+            }));
+            io.to(roomId).emit('update_player_characters', characterList);
+
             console.log(`🚀 Game started in ${roomId}`);
         
         } else {
@@ -312,6 +331,7 @@ io.on('connection', (socket) => {
             word: word,
             isCorrect: isCorrect,
             alienId: targetAlien?.id,
+            character: players[playerId].character
         });
     
         // Broadcast the result to all players in the room
@@ -320,6 +340,7 @@ io.on('connection', (socket) => {
             word: word,
             isCorrect: isCorrect,
             alienId: targetAlien?.id,
+            character: players[playerId].character
         });
     
         // Destroy the alien if the word is correct
@@ -362,10 +383,10 @@ io.on('connection', (socket) => {
         // Delete the room if it is empty
         if (rooms[roomId].players.length === 1) {
             // Return the room ID to the pool
-            const roomNumber = parseInt(roomId.split('_')[1]);
+            const roomNumber = parseInt(roomId.split(' ')[1]);
             availableRoomIds.push(roomNumber);
             availableRoomIds.sort((a, b) => a - b); // Keep the pool sorted
-    
+            
             // Delete the room
             delete rooms[roomId];
             delete gameState[roomId];
@@ -404,7 +425,7 @@ io.on('connection', (socket) => {
                     delete gameState[roomId];
 
                     // Return the room ID to the pool
-                    const roomNumber = parseInt(roomId.split('_')[1]);
+                    const roomNumber = parseInt(roomId.split(' ')[1]);
                     availableRoomIds.push(roomNumber);
                     availableRoomIds.sort((a, b) => a - b); // Keep the pool sorted
 
@@ -470,7 +491,8 @@ function updatePlayerList(roomId) {
         id: playerId,
         name: players[playerId].name,
         ready: players[playerId].ready,
-        is_head: rooms[roomId].head === playerId
+        is_head: rooms[roomId].head === playerId,
+        character: players[playerId].character
     }));
 
     // Emit the updated player list to all clients in the room, including the head
@@ -622,7 +644,7 @@ function spawnAlien(roomId, speed) {
     const alien = {
         id: `alien_${Date.now()}`,
         word: word,
-        position: { x: Math.random() * 100, y: 0 }, // Random x position at the top
+        position: { x: Math.random() * 95, y: 0 }, // Random x position at the top
         speed: speed // Add speed to the alien object
     };
 
