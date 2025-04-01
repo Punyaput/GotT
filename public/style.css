@@ -140,7 +140,8 @@ button:disabled {
         width: 90%;
     }
     .name-and-play-container button {
-        width: 40%;
+        width: 150px;
+        margin-bottom: 15px;
     }
     #player-name {
         width: 70%;  /* Scale down to 90% of the container width */
@@ -169,15 +170,21 @@ button:disabled {
     border-radius: 5px;
     background: rgba(255, 255, 255, 0.1);
     color: #fff;
-    margin-bottom: 20px;
     width: 300px;
     text-align: center;
+    margin-bottom: 15px;
 }
 #name-form input::placeholder {
     color: #aaa;
 }
-.name-and-play-container button {
-    margin-left: 10px;
+.how-to-play-btn {
+    margin-bottom: 15px;
+    width: 150px;
+    background: linear-gradient(135deg, #533c40, #152b46)
+}
+.leaderboard-btn {
+    width: 150px;
+    background: linear-gradient(135deg, #533c40, #152b46)
 }
 .first-logo {
     display: flex;
@@ -268,18 +275,100 @@ button:disabled {
 .player-name {
     margin-left: 10px;
     max-width: calc(100% - 155px);
-    overflow: auto;
+    overflow: hidden;
 }
 #ready-state {
     position: absolute;
     right: 55px;
 }
 .character-selection {
+    position: relative;
     margin: -3px 0px -3px 0px;
     background-color: rgba(255, 255, 255, 0.2);
     border-radius: 5px;
     width: 100%;
-    height: 110px;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.arrow {
+    position: absolute;
+    top: 50%;
+    width: 46px;
+    height: 100%;
+    background-color: rgba(89, 89, 89, 0.2);
+    transform: translateY(-50%);
+    font-size: 30px;
+    color: white;
+    cursor: pointer;
+    transition: transform 0.1s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.arrow:hover {
+    transform: translateY(-50%) scale(1.2);
+}
+.left {
+    left: 0px; 
+}
+.right {
+    right: 0px; 
+}
+.character-container {
+    margin-top: -30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 80px;
+    overflow: hidden;
+    position: relative;
+}
+.character {
+    width: 80px;
+    height: 80px;
+    background-color: rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 20px;
+    color: white;
+    border-radius: 10px;
+    position: absolute;
+    transition: transform 0.4s ease-in-out, opacity 0.3s ease-in-out;
+}
+.character-image1, .character-image2, .character-image3 {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+.fade-out-left {
+    transform: rotateY(-90deg);
+    opacity: 0;
+}
+.fade-out-right {
+    transform: rotateY(90deg);
+    opacity: 0;
+}
+.fade-in {
+    transform: translateX(0);
+    opacity: 1;
+}
+.select-btn {
+    position: absolute;
+    bottom: 3px;
+    color: white;
+    border: none;
+    padding: 5px 15px;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: transform 0.1s;
+}
+.select-btn:hover {
+    transform: scale(1.1);
 }
 
 /* Game screen */
@@ -357,9 +446,7 @@ button:disabled {
 .player-square {
     width: 50px;
     height: 50px;
-    background: #e94560;
     border-radius: 10px;
-    box-shadow: 0 0 10px #e94560; /* Glow effect */
 }
 
 /* Word display above the player */
@@ -372,9 +459,11 @@ button:disabled {
     padding: 5px;
     border-radius: 5px;
     text-align: center;
-    font-size: 14px;
+    font-size: 0.8rem;
     color: #fff;
     box-shadow: 0 0 10px rgba(233, 69, 96, 0.5); /* Glow effect */
+    max-width: 25%;
+    word-wrap: break-word;
 }
 
 /* Name display below the player */
@@ -387,19 +476,21 @@ button:disabled {
     padding: 5px;
     border-radius: 5px;
     text-align: center;
-    font-size: 14px;
+    font-size: 0.8rem;
     color: #fff;
     box-shadow: 0 0 10px rgba(233, 69, 96, 0.5); /* Glow effect */
+    max-width: 20%;
+    word-wrap: break-word;
 }
 
 /* Alien word box */
 .alien {
     user-select: none;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     position: absolute;
     color: #fff;
     background-color: rgba(99, 99, 99, 0.5);
-    padding: 10px;
+    padding: 7px;
     border-radius: 5px;
     text-align: center;
     display: flex;
@@ -506,9 +597,65 @@ button:disabled {
 .laser-beam {
     position: absolute;
     height: 2px;
-    background: linear-gradient(to right, #00ff00, #00ff00, transparent); /* Green laser */
     transform-origin: left;
     animation: fadeLaser 0.5s linear forwards;
+}
+.laser-color-Nulla {
+    background: linear-gradient(to right, #ffffff, #ffffff, transparent);
+}
+.laser-color-Jacky {
+    background: linear-gradient(to right, #ff00ff, #ff00ff, transparent);
+}
+.laser-color-Pewya {
+    background: linear-gradient(to right, #0000ff, #0000ff, transparent);
+}
+.laser-color-Nutty {
+    background: linear-gradient(to right, #00ff00, #00ff00, transparent);
+}
+.laser-color-Yoda {
+    background: linear-gradient(to right, #ffff00, #ffff00, transparent);
+}
+.laser-color-Arthur {
+    background: linear-gradient(to right, #ff9900, #ff9900, transparent);
+}
+.laser-color-Power {
+    background: linear-gradient(to right, #ff0000, #ff0000, transparent);
+}
+.laser-color-Tuxedo {
+    background: linear-gradient(to right, #000000, #000000, transparent);
+}
+
+.bg-color-Nulla {
+    box-shadow: 0 0 6px #ffffff;
+    background-color: rgba(255, 255, 255, 0.4);
+}
+.bg-color-Jacky {
+    box-shadow: 0 0 6px #ff00ff;
+    background-color: rgba(255, 0, 255, 0.4);
+}
+.bg-color-Pewya {
+    box-shadow: 0 0 6px #0000ff;
+    background-color: rgba(0, 0, 255, 0.4);
+}
+.bg-color-Nutty {
+    box-shadow: 0 0 6px #00ff00;
+    background-color: rgba(0, 255, 0, 0.4);
+}
+.bg-color-Yoda {
+    box-shadow: 0 0 6px #ffff00;
+    background-color: rgba(255, 255, 0, 0.4);
+}
+.bg-color-Arthur {
+    box-shadow: 0 0 6px #ff9900;
+    background-color: rgba(255, 99, 0, 0.4);
+}
+.bg-color-Power {
+    box-shadow: 0 0 6px #ff0000;
+    background-color: rgba(255, 0, 0, 0.4);
+}
+.bg-color-Tuxedo {
+    box-shadow: 0 0 6px #000000;
+    background-color: rgba(0, 0, 0, 0.4);
 }
 
 @keyframes fadeLaser {
