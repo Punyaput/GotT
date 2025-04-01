@@ -589,16 +589,17 @@ function printAll() {
     socket.emit('print_all')
 }
 
-function adjustHeight() {
-    document.body.style.height = `${window.visualViewport.height}px`;
-}
-
 function howToPlay() {
     console.log("not implemented yet");
 }
 
 function leaderBoard() {
     console.log("not implemented yet");
+}
+
+function adjustHeight() {
+    document.body.style.height = `${window.visualViewport.height}px`;
+    document.getElementById("star-container").style.height = `${window.visualViewport.height}px`;
 }
 
 window.visualViewport.addEventListener("resize", adjustHeight);
