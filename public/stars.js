@@ -2,7 +2,7 @@
 function createStars() {
     const starContainer = document.createElement("div");
     starContainer.className = "star-container";
-    starContainer.id = "star-container";
+    starContainer.id = "star-container"
 
     // Number of stars to create
     const numStars = 200;
@@ -32,7 +32,7 @@ function createStars() {
     }
 
     // Append the star container to the body
-    document.body.appendChild(starContainer);
+    document.getElementById("cover-star").appendChild(starContainer);
 }
 
 // Call this function when the page loads
