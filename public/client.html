@@ -11,45 +11,48 @@
     <script src="stars.js"></script>
 </head>
 <body>
-    <div id="name-form">
-        <div class="first-logo">logo</div>
-        <h1>Guardian of the Typurr</h1>
-        <div class="name-and-play-container">
-            <input type="text" autocomplete="off" id="player-name" placeholder="Enter your name">
-            <button onclick="setName()">Play</button>
-        </div>
-        <button class="how-to-play-btn" onclick="howToPlay()">How to play</button>
-        <button class="leaderboard-btn" onclick="leaderBoard()">Leaderboard</button>
-    </div>
-
-    <div id="lobby" style="display: none;">
-        <h1>Lobby</h1>
-        <button id="create-room-btn" onclick="createRoom()">Create Room</button>
-        <div class="room-container" id="room-list"></div>
-
-        <div id="game-room">
-            <h2 id="room-title"></h2>
-            <div class="ready-and-exit-btns">
-                <button id="exit-button" onclick="exitRoom()">Exit Room</button>
-                <button id="ready-button" onclick="readyUp()">Ready</button>
+    <div id="cover-star">
+        <div id="name-form">
+            <div class="first-logo">logo</div>
+            <h1>Guardian of the Typurr</h1>
+            <div class="name-and-play-container">
+                <input type="text" autocomplete="off" id="player-name" placeholder="Enter your name">
+                <button onclick="setName()">Play</button>
             </div>
-            <div class="player-list" id="player-list"></div>
+            <button class="how-to-play-btn" onclick="howToPlay()">How to play</button>
+            <button class="leaderboard-btn" onclick="leaderBoard()">Leaderboard</button>
+        </div>
+    
+        <div id="lobby" style="display: none;">
+            <h1>Lobby</h1>
+            <button id="create-room-btn" onclick="createRoom()">Create Room</button>
+            <div class="room-container" id="room-list"></div>
+    
+            <div id="game-room">
+                <h2 id="room-title"></h2>
+                <div class="ready-and-exit-btns">
+                    <button id="exit-button" onclick="exitRoom()">Exit Room</button>
+                    <button id="ready-button" onclick="readyUp()">Ready</button>
+                </div>
+                <div class="player-list" id="player-list"></div>
+            </div>
+        </div>
+        
+        <!-- Game Screen -->
+        <div id="game-screen" style="display: none;">
+            <!-- <h1>Game</h1> -->
+            <div id="game-container">
+                <!-- <div id="game-aliens-container"></div> add new when game start -->
+            </div>
+    
+            <div id="game-over-screen" style="display: none;">
+                <h2>Game Over!</h2>
+                <p id="countdown"></p>
+                <button id="return-to-lobby-button" onclick="returnToLobby()">Return to Lobby</button>
+            </div>
         </div>
     </div>
     
-    <!-- Game Screen -->
-    <div id="game-screen" style="display: none;">
-        <!-- <h1>Game</h1> -->
-        <div id="game-container">
-            <!-- <div id="game-aliens-container"></div> add new when game start -->
-        </div>
-
-        <div id="game-over-screen" style="display: none;">
-            <h2>Game Over!</h2>
-            <p id="countdown"></p>
-            <button id="return-to-lobby-button" onclick="returnToLobby()">Return to Lobby</button>
-        </div>
-    </div>
 
 </body>
 </html>
