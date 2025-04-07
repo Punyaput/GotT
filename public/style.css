@@ -1,4 +1,8 @@
 /* General styles */
+html {
+    height: 100svh;
+}
+
 body {
     font-family: 'Orbitron', sans-serif;
     margin: 0;
@@ -6,7 +10,7 @@ body {
     background: linear-gradient(135deg, #1a1a2e, #16213e); /* Galaxy gradient */
     color: #fff;
     overflow: hidden;
-    height: 100svh;
+    height: 100%;
 }
 
 #cover-star {
