@@ -7,7 +7,7 @@ body {
     font-family: 'Orbitron', sans-serif;
     margin: 0;
     padding: 0;
-    background: linear-gradient(135deg, #1a1a2e, #16213e); /* Galaxy gradient */
+    background: linear-gradient(135deg, #e1e1e1, #bdbdbd); /* Galaxy gradient */
     color: #fff;
     overflow: hidden;
     height: 100%;
