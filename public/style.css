@@ -99,7 +99,7 @@ button:disabled {
     border-radius: 20px;
     background-color: rgba(167, 49, 251, 0.05);
     box-shadow: 0 0 10px rgba(233, 69, 96, 0.5);
-    overflow: scroll;
+    overflow: auto;
 }
 #room-title {
     font-size: 30px;
