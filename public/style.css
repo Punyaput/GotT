@@ -400,21 +400,6 @@ button:disabled {
     border-radius: 10px;
     overflow: hidden;
 }
-
-#game-over-screen {
-    transform: translate(-50%, -50%);
-    background-color: rgba(0, 0, 0, 0.8);
-    color: #fff;
-    padding: 20px;
-    width: 70%;
-    max-width: 300px;
-    border-radius: 10px;
-}
-#game-over-screen h2 {
-    margin-top: 5px;
-    margin-bottom: 5px;
-}
-
 .room.in-progress {
     background-color: #ffcccb; /* Light red to indicate ongoing game */
     opacity: 0.7;
@@ -588,11 +573,12 @@ button:disabled {
     align-items: center;
     flex-direction: column;
     position: absolute;
-    top: 50%;
+    top: 30%;
     left: 50%;
+    max-height: 50%;
     transform: translate(-50%, -50%);
     background: rgba(0, 0, 0, 0.65);
-    padding: 20px;
+    padding: 5px 15px 15px 15px;
     border-radius: 10px;
     text-align: center;
     box-shadow: 0 0 20px rgba(233, 69, 96, 0.8); /* Glow effect */
@@ -600,6 +586,8 @@ button:disabled {
 
 #game-over-screen h2 {
     font-size: 36px;
+    margin-top: 10px;
+    margin-bottom: 0px;
 }
 
 #countdown {
