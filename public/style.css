@@ -10,11 +10,6 @@ body {
     touch-action: none;
 }
 
-#cover-star {
-    height: 100%;
-    width: 100%;
-}
-
 h1, h2, h3 {
     font-family: 'Orbitron', sans-serif; /* Futuristic font */
     color: #e94560; /* Vibrant pink */
