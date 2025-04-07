@@ -11,6 +11,7 @@ body {
     color: #fff;
     overflow: hidden;
     height: 100%;
+    touch-action: none;
 }
 
 #cover-star {
