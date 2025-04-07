@@ -23,6 +23,8 @@ let availableRoomIds = Array.from({ length: MAX_ROOMS }, (_, i) => i + 1); // Po
 let gameState = {}; // Stores game state: {room_id: {aliens: [{id: string, word: string, position: {x: number, y: number}, speed: int}], 
 // waveNumber: int, waveStarted: boolean, alienSpawned: int, alienDestroyed: int, gameOver: boolean}}
 // health: int, shield: int,
+const magics = ["/reduce", "/binary", "/security", "/absorb", "/heal", "/regen", "/push", "/teleport", "/reshuffle", "/freeze", "/slow", "/fork", "/purge"];
+const availableCharacters = ["Nulla", "Jacky", "Pewya", "Nutty", "Yoda", "Arthur", "Power", "Tuxedo"];
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'client.html')); // Serve the HTML file
@@ -34,12 +36,25 @@ io.on('connection', (socket) => {
     console.log(`Player ${playerId} connected.`);
 
     socket.on('set_name', (data) => {
+        if (players[playerId].name === "") {
         players[playerId].name = data.name;
         socket.emit('name_set', { name: data.name });
+        }
+        else {
+            socket.emit('error', { message: 'You already have a name!' });
+        }
     });
 
     socket.on('change_character', (character) => {
         const roomId = players[playerId].room_id
+        if (gameState[roomId]) {
+            socket.emit('error', { message: "You can't change character mid-game" });
+            return;
+        }
+        if (!(availableCharacters.includes(character))) {
+            socket.emit('error', { message: "Incorrect character value. Are you trying to mess with front-end functions?" });
+            return;
+        }
         players[playerId].character = character;
         io.to(roomId).emit('character_changed', { id : playerId, character : character});
     });
@@ -118,6 +133,10 @@ io.on('connection', (socket) => {
 
         if (!roomId) {
             socket.emit('error', { message: 'You are not in a room.' });
+            return;
+        }
+        if (gameState[roomId]) {
+            socket.emit('error', { message: 'You are currently playing.' });
             return;
         }
 
@@ -230,6 +249,11 @@ io.on('connection', (socket) => {
             socket.emit('error', { message: 'You are not in a room.' });
             return;
         }
+        console.log(rooms[roomId].players.length)
+        if (rooms[roomId].players.length === 1) {
+            socket.emit('error', { message: "Please don't mess with front-end functions" });
+            return;
+        }
 
         // Toggle the player's ready state
         players[playerId].ready = !players[playerId].ready;
@@ -258,6 +282,13 @@ io.on('connection', (socket) => {
         // Only the head can start the game
         if (rooms[roomId].head !== playerId) {
             socket.emit('error', { message: 'Only the room head can start the game.' });
+            return;
+        }
+
+        // If game is on-going, disallow start
+        console.log(rooms[roomId].game_in_progress)
+        if (rooms[roomId].game_in_progress) {
+            socket.emit('error', { message: 'You are already in-game.' });
             return;
         }
 
@@ -395,6 +426,11 @@ io.on('connection', (socket) => {
             return;
         }
 
+        if (gameState[roomId]) {
+            socket.emit('error', { message: 'You are currently playing.' });
+            return;
+        }
+
         // Notify the player to return to the lobby
         socket.emit('returned_to_lobby');
 
@@ -479,7 +515,10 @@ io.on('connection', (socket) => {
         });
     });
 
-    socket.on('print_all', () => {
+    socket.on('print_all', (password) => {
+        if (!(password === 12345678)) {
+            return;
+        } 
         console.log('Players => ' + JSON.stringify(players))
         console.log('Rooms => ' + JSON.stringify(rooms))
         console.log('GameState => ' + JSON.stringify(gameState))
@@ -491,28 +530,30 @@ io.on('connection', (socket) => {
 
     function handleMagicWord(playerId, roomId, word) {
         const player = players[playerId];
+        let magicSuccess = false;
+
+        if (!(magics.includes(word))) {
+            // Wrong Command (red text)
+            io.to(roomId).emit("word_submitted", {
+                playerId: playerId,
+                isCorrect: false,
+            });
+            return;
+        }
     
         // Check if the player is currently on cooldown
         if (player.cooldown && Date.now() - player.cooldown < 30000) {
             const remainingCooldown = 30000 - (Date.now() - player.cooldown);
             console.log(`Player is on cooldown. Remaining time: ${remainingCooldown / 1000}s`);
+            // Magic on cooldown (red text)
+            io.to(roomId).emit("word_submitted", {
+                playerId: playerId,
+                isCorrect: false,
+            });
             return; // Prevent casting the spell if cooldown hasn't finished
         }
-    
-        // Set the player's cooldown to the current timestamp
-        player.cooldown = Date.now();
-    
-        // Start the cooldown timer (30 seconds)
-        setTimeout(() => {
-            player.cooldown = null; // Reset cooldown after 30 seconds
-            console.log(`Player ${playerId}'s cooldown is over, they can cast again.`);
-            io.to(roomId).emit("update_cooldown_global", { playerId: playerId, toggle: true , character: player.character });
-        }, 30000); // 30 seconds cooldown
-    
-        const now = Date.now(); // server timestamp in milliseconds
-        socket.emit("update_cooldown", { startTime: now, character: player.character });
-        io.to(roomId).emit("update_cooldown_global", { playerId: playerId, toggle: false , character: player.character });
-        ///////////////////////////////////////////
+
+        console.log(players[playerId].character)
     
         switch (players[playerId].character) {
             case "Jacky":
@@ -544,6 +585,7 @@ io.on('connection', (socket) => {
                             });
                         }
                     });
+                    magicSuccess = true;
                 }
                 else if (word == "/binary") {
                     gameState[roomId].aliens.forEach(alien => {
@@ -562,6 +604,7 @@ io.on('connection', (socket) => {
                             });
                         }
                     });
+                    magicSuccess = true;
                 }
     
                 break;
@@ -571,7 +614,8 @@ io.on('connection', (socket) => {
                     if (gameState[roomId].shield == 90) {addedShield = 10}
                     if (gameState[roomId].shield == 100) {addedShield = 0}
                     gameState[roomId].shield += addedShield;
-                    io.to(roomId).emit("update_shield", addedShield)
+                    io.to(roomId).emit("update_shield", addedShield);
+                    magicSuccess = true;
                 }
                 else if (word == "/absorb") {
                     // Activate absorption
@@ -589,6 +633,7 @@ io.on('connection', (socket) => {
                         gameState[roomId].absorbTimeout = null;
                         io.to(roomId).emit("display_absorption", false);
                     }, 3000);
+                    magicSuccess = true;
                 }
     
                 break;
@@ -599,7 +644,8 @@ io.on('connection', (socket) => {
                     if (gameState[roomId].health == 90) {addedHealth = 10}
                     if (gameState[roomId].health == 100) {addedHealth = 0}
                     gameState[roomId].health += addedHealth;
-                    io.to(roomId).emit("update_health", addedHealth)
+                    io.to(roomId).emit("update_health", addedHealth);
+                    magicSuccess = true;
                 }
                 else if (word == "/regen") {
                     // This is black magic
@@ -617,6 +663,7 @@ io.on('connection', (socket) => {
                         }
                         ticks++;
                     }, 6000);
+                    magicSuccess = true;
                 }
     
                 break;
@@ -652,6 +699,7 @@ io.on('connection', (socket) => {
                             }
                         }
                     });
+                    magicSuccess = true;
                 }
                 else if (word == "/teleport") {
                     // Statistically move half of the aliens to the top
@@ -660,16 +708,9 @@ io.on('connection', (socket) => {
                         if (moveTop) {
                             alien.position.y = 0; // Set to 0 (move to top)
                             io.to(roomId).emit('alien_moved', { id: alien.id, position: alien.position });
-                            
-                            // io.to(roomId).emit("word_submitted", {
-                            //     playerId: playerId,
-                            //     isMagic: true,
-                            //     alienId: alien.id,
-                            //     character: players[playerId].character,
-                            //     drawLaser: true
-                            // });
                         }
                     });
+                    magicSuccess = true;
                 }
                 else if (word == "/reshuffle") {
                     // Reshuffle all aliens x position
@@ -677,12 +718,13 @@ io.on('connection', (socket) => {
                         alien.position.x = Math.random() * 95;
                         io.to(roomId).emit('alien_reshuffled', { id: alien.id, position: alien.position.x });
                     });
+                    magicSuccess = true;
                 }
     
                 break;
             case "Arthur":
                 if (word == "/freeze") {
-                    // Freeze 8 seconds
+                    // Freeze 6 seconds
                     gameState[roomId].aliens.forEach(alien => {
                         alien.speed = 0; // Set speed to 0 (freeze)
                         alien.status = "frozen";
@@ -696,8 +738,9 @@ io.on('connection', (socket) => {
                             alien.speed = alien.speedAtBirth;
                             alien.status = "normal";
                             alien.freezeTimeout = null;
-                        }, 8000);
+                        }, 6000);
                     });
+                    magicSuccess = true;
                 }
                 else if (word == "/slow") {
                     // Slow 10 seconds
@@ -717,6 +760,7 @@ io.on('connection', (socket) => {
                             alien.slowTimeout = null;
                         }, 10000);
                     });
+                    magicSuccess = true;
                 }
     
                 break;
@@ -766,6 +810,7 @@ io.on('connection', (socket) => {
                             startWave(roomId, gameState[roomId].waveNumber);
                         }
                     });
+                    magicSuccess = true;
                 }
                 else if (word == "/purge") {
                     gameState[roomId].aliens.forEach(alienTarget => {
@@ -802,21 +847,317 @@ io.on('connection', (socket) => {
                             }
                         }
                     });
+                    magicSuccess = true;
                 }
     
                 break;
-            case "Tuxudo":
-                if (word == "") {
+            case "Tuxedo":
+                if (word == "/reduce") {
+                    // Sort aliens by word length DESC, and if tied, by position.y ASC
+                    const top4Aliens = gameState[roomId].aliens
+                        .slice() // Clone to avoid mutating original
+                        .sort((a, b) => {
+                        if (b.word.length !== a.word.length) {
+                            return b.word.length - a.word.length; // Longer words first
+                        } else {
+                          return a.position.y - b.position.y;   // Higher up (smaller y) first
+                        }
+                    })
+                    .slice(0, 4); // Take top 4 only
     
+                    // Now do stuff only for the top 4
+                    gameState[roomId].aliens.forEach(alien => {
+                        if (top4Aliens.includes(alien)) {
+                            alien.word = alien.word[0];
+                            io.to(roomId).emit('update_alien_word', { id: alien.id, newWord: alien.word });
+                        
+                            io.to(roomId).emit("word_submitted", {
+                                playerId: playerId,
+                                isMagic: true,
+                                alienId: alien.id,
+                                character: players[playerId].character,
+                                drawLaser: true
+                            });
+                        }
+                    });
+                    magicSuccess = true;
                 }
-                else if (word == "") {
+                else if (word == "/binary") {
+                    gameState[roomId].aliens.forEach(alien => {
+                        const cutBinary = Math.random() < 0.75;
+                        if (cutBinary) {
+                            const half = Math.ceil(alien.word.length / 2);
+                            alien.word = alien.word.slice(0, half); // Cut word in half
+                            io.to(roomId).emit('update_alien_word', { id: alien.id, newWord: alien.word });
+                            
+                            io.to(roomId).emit("word_submitted", {
+                                playerId: playerId,
+                                isMagic: true,
+                                alienId: alien.id,
+                                character: players[playerId].character,
+                                drawLaser: true
+                            });
+                        }
+                    });
+                    magicSuccess = true;
+                }
+                else if (word == "/security") {
+                    let addedShield = 20
+                    if (gameState[roomId].shield == 90) {addedShield = 10}
+                    if (gameState[roomId].shield == 100) {addedShield = 0}
+                    gameState[roomId].shield += addedShield;
+                    io.to(roomId).emit("update_shield", addedShield);
+                    magicSuccess = true;
+                }
+                else if (word == "/absorb") {
+                    // Activate absorption
+                    gameState[roomId].absorbActive = true;
+                    io.to(roomId).emit("display_absorption", true);
     
+                    // If a timeout is already counting down, cancel it
+                    if (gameState[roomId].absorbTimeout) {
+                        clearTimeout(gameState[roomId].absorbTimeout);
+                    }
+    
+                    // Start a new 3-second countdown
+                    gameState[roomId].absorbTimeout = setTimeout(() => {
+                        gameState[roomId].absorbActive = false;
+                        gameState[roomId].absorbTimeout = null;
+                        io.to(roomId).emit("display_absorption", false);
+                    }, 3000);
+                    magicSuccess = true;
+                }
+                else if (word == "/heal") {
+                    let addedHealth = 30
+                    if (gameState[roomId].health == 80) {addedHealth = 20}
+                    if (gameState[roomId].health == 90) {addedHealth = 10}
+                    if (gameState[roomId].health == 100) {addedHealth = 0}
+                    gameState[roomId].health += addedHealth;
+                    io.to(roomId).emit("update_health", addedHealth);
+                    magicSuccess = true;
+                }
+                else if (word == "/regen") {
+                    // This is black magic
+                    let ticks = 0;
+    
+                    const regenInterval = setInterval(() => {
+                        // Stop after 5 ticks (5 x 6 seconds = 30 seconds)
+                        if (ticks >= 5 || !gameState[roomId]) {
+                            clearInterval(regenInterval);
+                            return;
+                        }
+                        if (gameState[roomId].health != 100) {
+                            gameState[roomId].health += 10;
+                            io.to(roomId).emit("update_health", 10);
+                        }
+                        ticks++;
+                    }, 6000);
+                    magicSuccess = true;
+                }
+                else if (word == "/push") {
+                    // Push all aliens up by 40%, if off-screen, delete them
+                    gameState[roomId].aliens.forEach(alien => {
+                        // Move up approximately 25%
+                        alien.position.y -= 25; 
+                        io.to(roomId).emit('alien_moved', { id: alien.id, position: alien.position });
+                        if (alien.position.y <= -10) {
+                            // Remove alien from list
+                            gameState[roomId].aliens = gameState[roomId].aliens.filter(n => n !== alien);
+                            // Update the number of aliens destroyed for the current wave
+                            gameState[roomId].aliensDestroyed += 1;
+                            // Update client visual
+                            io.to(roomId).emit("alien_destroyed", alien.id);
+    
+                            // Check if the current wave is complete
+                            if (
+                                gameState[roomId].aliensSpawned === gameState[roomId].totalAliens && // All aliens spawned
+                                gameState[roomId].aliensDestroyed === gameState[roomId].totalAliens // All aliens destroyed
+                            ) {
+                                // Safely increment the wave number
+                                if (typeof gameState[roomId].waveNumber === 'number') {
+                                    gameState[roomId].waveNumber += 1;
+                                } else {
+                                    gameState[roomId].waveNumber = 1; // Fallback to Wave 1 if waveNumber is invalid
+                                }
+                    
+                                // Start the next wave
+                                startWave(roomId, gameState[roomId].waveNumber);
+                            }
+                        }
+                    });
+                    magicSuccess = true;
+                }
+                else if (word == "/teleport") {
+                    // Statistically move half of the aliens to the top
+                    gameState[roomId].aliens.forEach(alien => {
+                        const moveTop = Math.random() < 0.75;
+                        if (moveTop) {
+                            alien.position.y = 0; // Set to 0 (move to top)
+                            io.to(roomId).emit('alien_moved', { id: alien.id, position: alien.position });
+                        }
+                    });
+                    magicSuccess = true;
+                }
+                else if (word == "/reshuffle") {
+                    // Reshuffle all aliens x position
+                    gameState[roomId].aliens.forEach(alien => {
+                        alien.position.x = Math.random() * 95;
+                        io.to(roomId).emit('alien_reshuffled', { id: alien.id, position: alien.position.x });
+                    });
+                    magicSuccess = true;
+                }
+                else if (word == "/freeze") {
+                    // Freeze 6 seconds
+                    gameState[roomId].aliens.forEach(alien => {
+                        alien.speed = 0; // Set speed to 0 (freeze)
+                        alien.status = "frozen";
+    
+                        // Clear any existing timeout to prevent overlap
+                        if (alien.freezeTimeout) clearTimeout(alien.freezeTimeout);
+                        if (alien.slowTimeout) clearTimeout(alien.slowTimeout); // clear slow if active
+    
+                        // Set a new timeout and store its ID
+                        alien.freezeTimeout = setTimeout(() => {
+                            alien.speed = alien.speedAtBirth;
+                            alien.status = "normal";
+                            alien.freezeTimeout = null;
+                        }, 6000);
+                    });
+                    magicSuccess = true;
+                }
+                else if (word == "/slow") {
+                    // Slow 10 seconds
+                    gameState[roomId].aliens.forEach(alien => {
+                        alien.speed /= 2; // Divide speed by 2 (slowing down)
+                        alien.speedAtBirth /= 2;
+                        alien.status = "slow";
+    
+                        // Clear any existing timeout to prevent overlap (Don't override freeze)
+                        if (alien.slowTimeout) clearTimeout(alien.slowTimeout);
+    
+                        // Set a new timeout and store its ID
+                        alien.slowTimeout = setTimeout(() => {
+                            alien.speedAtBirth *= 2;
+                            alien.speed = alien.speedAtBirth;
+                            alien.status = "normal";
+                            alien.slowTimeout = null;
+                        }, 10000);
+                    });
+                    magicSuccess = true;
+                }
+                else if (word == "/fork") {
+                    const aliens = gameState[roomId].aliens;
+        
+                    // Shuffle the aliens array
+                    const shuffledAliens = aliens
+                        .map(alien => ({ ...alien })) // Clone to avoid mutating the original list
+                        .sort(() => Math.random() - 0.5); // Random shuffle
+    
+                    // Select the first 4 aliens (or as many as available)
+                    const numberOfAliensToSelect = Math.min(4, shuffledAliens.length);
+                    const selectedAliens = shuffledAliens.slice(0, numberOfAliensToSelect);
+    
+                    // Perform actions on the selected aliens
+                    selectedAliens.forEach(alienSelected => {
+    
+                        // Broadcast the result to all players in the room
+                        io.to(roomId).emit("word_submitted", {
+                            playerId: playerId,
+                            isMagic: true,
+                            alienId: alienSelected.id,
+                            character: players[playerId].character,
+                            drawLaser: true
+                        });
+    
+                        // Filter out targeted alien
+                        gameState[roomId].aliens = gameState[roomId].aliens.filter(alien => alien.id !== alienSelected.id);
+                        // Update the number of aliens destroyed for the current wave
+                        gameState[roomId].aliensDestroyed += 1;
+                        io.to(roomId).emit("alien_destroyed", alienSelected.id);
+                        // Check if the current wave is complete
+                        if (
+                            gameState[roomId].aliensSpawned === gameState[roomId].totalAliens && // All aliens spawned
+                            gameState[roomId].aliensDestroyed === gameState[roomId].totalAliens // All aliens destroyed
+                        ) {
+                            // Safely increment the wave number
+                            if (typeof gameState[roomId].waveNumber === 'number') {
+                                gameState[roomId].waveNumber += 1;
+                            } else {
+                                gameState[roomId].waveNumber = 1; // Fallback to Wave 1 if waveNumber is invalid
+                            }
+                
+                            // Start the next wave
+                            startWave(roomId, gameState[roomId].waveNumber);
+                        }
+                    });
+                    magicSuccess = true;
+                }
+                else if (word == "/purge") {
+                    gameState[roomId].aliens.forEach(alienTarget => {
+    
+                        if (Math.random() < 0.5) {
+                            // Broadcast the result to all players in the room
+                            io.to(roomId).emit("word_submitted", {
+                                playerId: playerId,
+                                isMagic: true,
+                                alienId: alienTarget.id,
+                                character: players[playerId].character,
+                                drawLaser: true
+                            });
+    
+                            // Filter out targeted alien
+                            gameState[roomId].aliens = gameState[roomId].aliens.filter(alien => alien.id !== alienTarget.id);
+                            // Update the number of aliens destroyed for the current wave
+                            gameState[roomId].aliensDestroyed += 1;
+                            io.to(roomId).emit("alien_destroyed", alienTarget.id);
+                            // Check if the current wave is complete
+                            if (
+                                gameState[roomId].aliensSpawned === gameState[roomId].totalAliens && // All aliens spawned
+                                gameState[roomId].aliensDestroyed === gameState[roomId].totalAliens // All aliens destroyed
+                            ) {
+                                // Safely increment the wave number
+                                if (typeof gameState[roomId].waveNumber === 'number') {
+                                    gameState[roomId].waveNumber += 1;
+                                } else {
+                                    gameState[roomId].waveNumber = 1; // Fallback to Wave 1 if waveNumber is invalid
+                                }
+                    
+                                // Start the next wave
+                                startWave(roomId, gameState[roomId].waveNumber);
+                            }
+                        }
+                    });
+                    magicSuccess = true;
                 }
     
                 break;
             default:
-                
+                // Nulla
                 break;
+        }
+
+        if (magicSuccess) {
+            // Set the player's cooldown to the current timestamp
+            player.cooldown = Date.now();
+        
+            // Start the cooldown timer (30 seconds)
+            player.cooldownTimeOut = setTimeout(() => {
+                player.cooldown = null; // Reset cooldown after 30 seconds
+                player.cooldownTimeOut = null;
+                console.log(`Player ${playerId}'s cooldown is over, they can cast again.`);
+                io.to(roomId).emit("update_cooldown_global", { playerId: playerId, toggle: true , character: player.character });
+            }, 30000); // 30 seconds cooldown
+        
+            const now = Date.now(); // server timestamp in milliseconds
+            socket.emit("update_cooldown", { startTime: now, character: player.character });
+            io.to(roomId).emit("update_cooldown_global", { playerId: playerId, toggle: false , character: player.character });
+        }
+        else {
+            // Incorrect (red text)
+            io.to(roomId).emit("word_submitted", {
+                playerId: playerId,
+                isCorrect: false,
+            });
         }
     }
 });
@@ -911,7 +1252,7 @@ function startWave(roomId, waveNumber) {
         case 1:
             io.to(roomId).emit('alert_warning', "Wave 1 (10 enemies)");
             gameState[roomId].totalAliens = 10; // Total aliens for this wave
-            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 10, 1500, 3); // roomId, amount, delayMS, speedEach
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 10, 1500, 5); // roomId, amount, delayMS, speedEach
             break;
         case 2:
             io.to(roomId).emit('alert_warning', "Wave 2 (20 enemies)");
@@ -1016,6 +1357,23 @@ function moveAliens(roomId) {
     });
 }
 
+function resetCooldowns(roomId) {
+    const roomPlayers = rooms[roomId]?.players || {};
+
+    for (const playerId in roomPlayers) {
+        const player = players[roomPlayers[playerId]];
+
+        if (player.cooldownTimeOut) {
+            clearTimeout(player.cooldownTimeOut);
+            player.cooldownTimeOut = undefined;
+        }
+
+        player.cooldown = null;
+    }
+
+    console.log(`All cooldowns cleared for room ${roomId}`);
+}
+
 // Check for game over
 function checkGameOver(roomId) {
     const gameOverLine = 100; // Approximately crosses the game-over line
@@ -1045,6 +1403,7 @@ function checkGameOver(roomId) {
                 // Game over
                 gameState[roomId].gameOver = true;
                 io.to(roomId).emit('game_over');
+                resetCooldowns(roomId);
                 console.log(`Game over in room ${roomId}.`);
                 return;
             }
