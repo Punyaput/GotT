@@ -1251,7 +1251,7 @@ function startWave(roomId, waveNumber) {
         case 4:
             io.to(roomId).emit('alert_warning', "Wave 4 (19 enemies)");
             gameState[roomId].totalAliens = 19;
-            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 19, 1250, 8);
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 19, 1250, 0.8);
             break;
         case 5:
             io.to(roomId).emit('alert_warning', "Wave 5 (25 enemies)");
