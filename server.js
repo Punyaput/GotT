@@ -59,11 +59,6 @@ io.on('connection', (socket) => {
         io.to(roomId).emit('character_changed', { id : playerId, character : character});
     });
 
-    // socket.on('retrieve_character', (data) => {
-    //     const roomId = players[playerId].room_id
-    //     io.to(roomId).emit('character_changed', { id : playerId, character : players[playerId].character});
-    // });
-
     socket.on('get_rooms', () => {
         updateRoomList();
     });
@@ -249,7 +244,6 @@ io.on('connection', (socket) => {
             socket.emit('error', { message: 'You are not in a room.' });
             return;
         }
-        console.log(rooms[roomId].players.length)
         if (rooms[roomId].players.length === 1) {
             socket.emit('error', { message: "Please don't mess with front-end functions" });
             return;
@@ -286,7 +280,6 @@ io.on('connection', (socket) => {
         }
 
         // If game is on-going, disallow start
-        console.log(rooms[roomId].game_in_progress)
         if (rooms[roomId].game_in_progress) {
             socket.emit('error', { message: 'You are already in-game.' });
             return;
@@ -372,16 +365,7 @@ io.on('connection', (socket) => {
     
         // Check if the word is correct
         const isCorrect = !!targetAlien;
-    
-        // Notify the player of the word submission result
-        // socket.emit("word_submitted", {
-        //     playerId: playerId,
-        //     word: word,
-        //     isCorrect: isCorrect,
-        //     alienId: targetAlien?.id,
-        //     character: players[playerId].character
-        // });
-    
+
         // Broadcast the result to all players in the room
         io.to(roomId).emit("word_submitted", {
             playerId: playerId,
@@ -396,10 +380,12 @@ io.on('connection', (socket) => {
         if (targetAlien) {
             gameState[roomId].aliens = gameState[roomId].aliens.filter(alien => alien.id !== targetAlien.id);
             io.to(roomId).emit("alien_destroyed", targetAlien.id);
+            console.log(targetAlien.id);
     
             // Update the number of aliens destroyed for the current wave
             gameState[roomId].aliensDestroyed += 1;
-    
+            console.log(gameState[roomId].aliensDestroyed)
+            
             // Check if the current wave is complete
             if (
                 gameState[roomId].aliensSpawned === gameState[roomId].totalAliens && // All aliens spawned
@@ -552,8 +538,6 @@ io.on('connection', (socket) => {
             });
             return; // Prevent casting the spell if cooldown hasn't finished
         }
-
-        console.log(players[playerId].character)
     
         switch (players[playerId].character) {
             case "Jacky":
@@ -1251,28 +1235,227 @@ function startWave(roomId, waveNumber) {
     switch (waveNumber) {
         case 1:
             io.to(roomId).emit('alert_warning', "Wave 1 (10 enemies)");
-            gameState[roomId].totalAliens = 10; // Total aliens for this wave
-            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 10, 1500, 5); // roomId, amount, delayMS, speedEach
+            gameState[roomId].totalAliens = 10;
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 10, 1500, 0.5);
             break;
         case 2:
-            io.to(roomId).emit('alert_warning', "Wave 2 (20 enemies)");
-            gameState[roomId].totalAliens = 20;
-            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 20, 1200, 1.5);
+            io.to(roomId).emit('alert_warning', "Wave 2 (12 enemies)");
+            gameState[roomId].totalAliens = 12;
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 12, 1400, 0.6);
             break;
         case 3:
-            io.to(roomId).emit('alert_warning', "Wave 3 (25 enemies)");
-            gameState[roomId].totalAliens = 25;
-            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 25, 1000, 2);
+            io.to(roomId).emit('alert_warning', "Wave 3 (15 enemies)");
+            gameState[roomId].totalAliens = 15;
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 15, 1300, 0.7);
             break;
         case 4:
-            io.to(roomId).emit('alert_warning', "Wave 4 (30 enemies)");
-            gameState[roomId].totalAliens = 30;
-            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 30, 800, 3);
+            io.to(roomId).emit('alert_warning', "Wave 4 (19 enemies)");
+            gameState[roomId].totalAliens = 19;
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 19, 1250, 8);
             break;
         case 5:
-            io.to(roomId).emit('alert_warning', "BOSS WAVE (FINAL)");
-            gameState[roomId].totalAliens = 150;
-            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 150, 100, 4);
+            io.to(roomId).emit('alert_warning', "Wave 5 (25 enemies)");
+            gameState[roomId].totalAliens = 25;
+            setTimeout(() => {
+                spawnAlien(roomId, 1.4, "I", 20); // roomId, speed, specificWord, specificCoordX
+            }, 50);
+            setTimeout(() => {
+                spawnAlien(roomId, 1.4, "Love", 40);
+            }, 100);
+            setTimeout(() => {
+                spawnAlien(roomId, 1.4, "CN321", 60);
+            }, 150);
+            setTimeout(() => {
+                spawnAlien(roomId, 1.4, "I", 30);
+            }, 750);
+            setTimeout(() => {
+                spawnAlien(roomId, 1.4, "Love", 50);
+            }, 800);
+            setTimeout(() => {
+                spawnAlien(roomId, 1.4, "CN321", 70);
+            }, 850);
+            setTimeout(() => {
+                spawnAlien(roomId, 1.4, "I", 40);
+            }, 1450);
+            setTimeout(() => {
+                spawnAlien(roomId, 1.4, "Love", 60);
+            }, 1500);
+            setTimeout(() => {
+                spawnAlien(roomId, 1.4, "CN321", 80);
+            }, 1550);
+            setTimeout(() => {
+                gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 16, 1200, 0.9);
+            }, 2700);
+            break;
+        case 6:
+            io.to(roomId).emit('alert_warning', "Wave 6 (25 enemies)");
+            gameState[roomId].totalAliens = 25;
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 25, 1200, 1.2);
+            break;
+        case 7:
+            io.to(roomId).emit('alert_warning', "Wave 7 (27 enemies)");
+            gameState[roomId].totalAliens = 27;
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 27, 1150, 1.3);
+            break;
+        case 8:
+            io.to(roomId).emit('alert_warning', "Wave 8 (30 enemies)");
+            gameState[roomId].totalAliens = 30;
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 30, 1150, 1.4);
+            break;
+        case 9:
+            io.to(roomId).emit('alert_warning', "Wave 9 (35 enemies)");
+            gameState[roomId].totalAliens = 35;
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 35, 1100, 1.5);
+            break;
+        case 10:
+            io.to(roomId).emit('alert_warning', "Wave 10 (10 enemies, FAST!)");
+            gameState[roomId].totalAliens = 10;
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 10, 1100, 6);
+            break;
+        case 11:
+            io.to(roomId).emit('alert_warning', "Wave 11 (16 enemies)");
+            gameState[roomId].totalAliens = 16;
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 16, 800, 1.8);
+            break;
+        case 12:
+            io.to(roomId).emit('alert_warning', "Wave 12 (17 enemies)");
+            gameState[roomId].totalAliens = 17;
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 17, 790, 1.85);
+            break;
+        case 13:
+            io.to(roomId).emit('alert_warning', "Wave 13 (18 enemies)");
+            gameState[roomId].totalAliens = 18;
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 18, 780, 1.9);
+            break;
+        case 14:
+            io.to(roomId).emit('alert_warning', "Wave 14 (19 enemies)");
+            gameState[roomId].totalAliens = 19;
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 19, 770, 1.95);
+            break;
+        case 15:
+            io.to(roomId).emit('alert_warning', "Wave 15 (20 enemies)");
+            gameState[roomId].totalAliens = 20;
+            setTimeout(() => {
+                spawnAlien(roomId, 2.5, "I", 20);
+            }, 50);
+            setTimeout(() => {
+                spawnAlien(roomId, 2.5, "Love", 40);
+            }, 100);
+            setTimeout(() => {
+                spawnAlien(roomId, 2.5, "Ajarnjack", 60);
+            }, 150);
+            setTimeout(() => {
+                spawnAlien(roomId, 2.5, "I", 30);
+            }, 200);
+            setTimeout(() => {
+                spawnAlien(roomId, 2.5, "Love", 50);
+            }, 250);
+            setTimeout(() => {
+                spawnAlien(roomId, 2.5, "Ajarnpiya", 70);
+            }, 300);
+            setTimeout(() => {
+                spawnAlien(roomId, 2.5, "I", 40);
+            }, 350);
+            setTimeout(() => {
+                spawnAlien(roomId, 2.5, "Love", 60);
+            }, 400);
+            setTimeout(() => {
+                spawnAlien(roomId, 2.5, "Ajarnart", 80);
+            }, 450);
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 11, 770, 2);
+            break;
+        case 16:
+            io.to(roomId).emit('alert_warning', "Wave 16 (25 enemies, 1-10 !!!)");
+            gameState[roomId].totalAliens = 25;
+            setTimeout(() => {
+                setTimeout(() => {
+                    spawnAlien(roomId, 2.6, "1", 3);
+                }, 50);
+                setTimeout(() => {
+                    spawnAlien(roomId, 2.6, "2", 13);
+                }, 100);
+                setTimeout(() => {
+                    spawnAlien(roomId, 2.6, "3", 23);
+                }, 150);
+                setTimeout(() => {
+                    spawnAlien(roomId, 2.6, "4", 33);
+                }, 200);
+                setTimeout(() => {
+                    spawnAlien(roomId, 2.6, "5", 43);
+                }, 250);
+                setTimeout(() => {
+                    spawnAlien(roomId, 2.6, "6", 53);
+                }, 300);
+                setTimeout(() => {
+                    spawnAlien(roomId, 2.6, "7", 63);
+                }, 350);
+                setTimeout(() => {
+                    spawnAlien(roomId, 2.6, "8", 73);
+                }, 400);
+                setTimeout(() => {
+                    spawnAlien(roomId, 2.6, "9", 83);
+                }, 450);
+                setTimeout(() => {
+                    spawnAlien(roomId, 2.6, "10", 93);
+                }, 500);
+            }, 500);
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 15, 770, 2.1);
+            break;
+        case 17:
+            io.to(roomId).emit('alert_warning', "Wave 17 (25 enemies)");
+            gameState[roomId].totalAliens = 25;
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 25, 750, 2.2);
+            break;
+        case 18:
+            io.to(roomId).emit('alert_warning', "Wave 18 (25 enemies)");
+            gameState[roomId].totalAliens = 25;
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 25, 700, 2.3);
+            break;
+        case 19:
+            io.to(roomId).emit('alert_warning', "Wave 19 (25 enemies)");
+            gameState[roomId].totalAliens = 25;
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 25, 700, 2.4);
+            break;
+        case 20:
+            io.to(roomId).emit('alert_warning', "Wave 20 (10 enemies, random string)");
+            gameState[roomId].totalAliens = 10;
+            setTimeout(() => {
+                setTimeout(() => {
+                    spawnAlien(roomId, 1.5, getRandomString(4), 50);
+                }, 1000);
+                setTimeout(() => {
+                    spawnAlien(roomId, 1.5, getRandomString(4), 60);
+                }, 2000);
+                setTimeout(() => {
+                    spawnAlien(roomId, 1.5, getRandomString(4), 50);
+                }, 3000);
+                setTimeout(() => {
+                    spawnAlien(roomId, 1.5, getRandomString(4), 40);
+                }, 4000);
+                setTimeout(() => {
+                    spawnAlien(roomId, 1.5, getRandomString(4), 50);
+                }, 5000);
+                setTimeout(() => {
+                    spawnAlien(roomId, 1.5, getRandomString(4), 60);
+                }, 6000);
+                setTimeout(() => {
+                    spawnAlien(roomId, 1.5, getRandomString(4), 50);
+                }, 7000);
+                setTimeout(() => {
+                    spawnAlien(roomId, 1.5, getRandomString(4), 40);
+                }, 8000);
+                setTimeout(() => {
+                    spawnAlien(roomId, 1.5, getRandomString(4), 50);
+                }, 9000);
+                setTimeout(() => {
+                    spawnAlien(roomId, 1.5, getRandomString(10), 60);
+                }, 10000);
+            }, 500);
+            break;
+        case 21:
+            io.to(roomId).emit('alert_warning', "Final Wave! (100 enemies, FAST!!!)");
+            gameState[roomId].totalAliens = 100;
+            gameState[roomId].spawnInterval = spawnAlienWithDelay(roomId, 100, 100, 7);
             break;
         default:
             // If no more waves are defined, end the game
@@ -1284,6 +1467,17 @@ function startWave(roomId, waveNumber) {
     }
 }
 
+function getRandomString(length) {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+[]{}|;:,.<>?';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+      const randomIndex = Math.floor(Math.random() * characters.length);
+      result += characters[randomIndex];
+    }
+    return result;
+  }
+  
+
 // Function to spawn aliens with a delay between each spawn
 function spawnAlienWithDelay(roomId, count, delay, speed) {
     let spawnCount = 0;
@@ -1294,18 +1488,16 @@ function spawnAlienWithDelay(roomId, count, delay, speed) {
             return;
         }
 
-        spawnAlien(roomId, speed); // Spawn a single alien with the specified speed
+        spawnAlien(roomId, speed, null, null); // Spawn a single alien with the specified speed
         spawnCount++;
-
-        // Update the number of aliens spawned for the current wave
-        gameState[roomId].aliensSpawned = spawnCount;
+        
     }, delay);
 
     return spawnInterval; // Return the interval ID
 }
 
 // Spawn an alien
-function spawnAlien(roomId, speed) {
+function spawnAlien(roomId, speed, specificWord, specificCoordX) {
     const words = [
                   "OSI", "Network", "Application", "Session", "Data-Link", "Transport", "User", "Message",
                   "Transmit", "Receive", "RS232", "Ethernet", "Hardware", "Software", "Protocol", "Social",
@@ -1328,16 +1520,19 @@ function spawnAlien(roomId, speed) {
                   "5G", "4G", "ISP", "Dijkstra", "Session", "Route", "Bluetooth", "UDP", "SWP", "Connect",
                   "Sensor", "Repeater", "Media", "Frequency", "Period", "Analog", "Digital", "Morse"
                   ]; // Example words
+    
     const word = words[Math.floor(Math.random() * words.length)];
 
     const alien = {
         id: `alien_${Date.now()}`,
-        word: word,
-        position: { x: Math.random() * 95, y: 0 }, // Random x position at the top
+        word: specificWord? specificWord : word,
+        position: { x: specificCoordX? specificCoordX : Math.random() * 95, y: 0 }, // Random x position at the top
         speed: speed, // Add speed to the alien object
         speedAtBirth: speed,
         status: "normal"
     };
+
+    gameState[roomId].aliensSpawned += 1;
 
     if (gameState[roomId]) {
         gameState[roomId].aliens.push(alien);
