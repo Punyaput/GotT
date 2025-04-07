@@ -270,6 +270,24 @@ socket.on("game_started", (data) => {
     gameContainer.appendChild(gameOverLine);
     gameContainer.appendChild(gameAliensContainer);
 
+    // Draw health bar
+    const healthBar = document.createElement("div");
+    healthBar.classList.add("health-bar");
+    healthBar.id = "health-bar";
+    gameContainer.appendChild(healthBar);
+
+    // Set health bar to 100 (full)
+    document.getElementById("health-bar").style.width = `100%`;
+
+    // Draw shield bar
+    const shieldBar = document.createElement("div");
+    shieldBar.classList.add("shield-bar");
+    shieldBar.id = "shield-bar";
+    gameContainer.appendChild(shieldBar);
+
+    // Set shield bar to 0
+    document.getElementById("shield-bar").style.width = `0%`;
+
     // Add the input box
     const inputBox = document.createElement("input");
     inputBox.id = "input-box";
@@ -280,33 +298,63 @@ socket.on("game_started", (data) => {
     // Add input box event listener
     inputBox.addEventListener("input", handleInputChange); // Update word on input change
     document.getElementById("input-box").addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-        submitWord();
-    }
-
+        if (event.key === "Enter") {
+            submitWord();
+        }
     });
 
     // Add and update player squares
     updatePlayerPositions(data.players);
 });
 
-socket.on("update_player_characters", (data) => {
+socket.on("request_client_color_input_change", (data) => {
+    socket.emit("request_server_color_input_change", 0);
+});
 
+socket.on("color_input_cooldown", (playerCharacter) => {
+    const gameContainer = document.getElementById("game-container");
+    const inputBox = document.getElementById("input-box");
+
+    inputBox.classList.add(`border-color-${playerCharacter}`);
+    console.log(playerCharacter);
+
+    // Add cd to input box
+    const inputCD = document.createElement("div");
+    inputCD.id = "input-cd";
+    inputCD.classList.add("input-cd");
+    inputCD.classList.add(`bg-color-${playerCharacter}1`);
+    gameContainer.appendChild(inputCD);
+});
+
+socket.on("update_player_characters", (data) => {
     data.forEach((player) => {
+        document.getElementById(`player-${player.id}`).classList.add(`border-color-${player.character}`);
         document.getElementById("igchar-" + player.id).src = "./images/" + player.character + "TN2.png";
         document.getElementById("player-" + player.id).classList.add("bg-color-" + player.character);
     });
 });
 
+socket.on("update_health", (amount) => {
+    const health = document.getElementById("health-bar");
+    const widthNum = parseFloat(health.style.width);
+    document.getElementById("health-bar").style.width = `${widthNum + amount}%`;
+});
+
+socket.on("update_shield", (amount) => {
+    const shield = document.getElementById("shield-bar");
+    const widthNum = parseFloat(shield.style.width);
+    document.getElementById("shield-bar").style.width = `${widthNum + amount}%`;
+});
+
 // Handle word submission response
 socket.on("word_submitted", (data) => {
-    const { playerId, word, isCorrect, alienId, character } = data;
-    const wordDisplay = document.getElementById(`word-display-${playerId}`);
+    const { playerId, isCorrect, alienId, character, isMagic , drawLaser } = data;
+
     // Update the word display color
-    updateWordDisplayColor(playerId, isCorrect);
+    updateWordDisplayColor(playerId, isCorrect, isMagic, character);
 
     // If the word is correct, draw a laser beam to the alien
-    if (isCorrect) {
+    if (drawLaser) {
         drawLaserBeam(playerId, alienId, character);
     }
 });
@@ -348,6 +396,41 @@ socket.on("alien_moved", (data) => {
     const alienElement = document.getElementById(data.id);
     if (alienElement) {
         alienElement.style.top = `${data.position.y}%`;
+    }
+});
+
+socket.on("alien_reshuffled", (data) => {
+    const alienElement = document.getElementById(data.id);
+    if (alienElement) {
+        setTimeout(() => {
+            const alienWordRect = alienElement.getBoundingClientRect();
+            const xpos = Math.max(0, Math.min(data.position, 100 - ((alienWordRect.width / window.innerWidth) * 100)));
+            alienElement.style.left = `${xpos}%`;
+        }, 0);
+    }
+
+});
+
+socket.on("display_absorption", (toggleState) => {
+    if (toggleState) {
+        document.getElementById("game-over-line").style.background = `#0000ff`;
+        document.getElementById("game-over-line").style.boxShadow = `#0000ff`;
+    }
+    else {
+        document.getElementById("game-over-line").style.background = `#e94560`;
+        document.getElementById("game-over-line").style.boxShadow = `#e94560`;
+    }
+});
+
+socket.on("update_alien_word", (data) => {
+    const alien = document.getElementById(data.id);
+
+    // Find the text node inside the parent
+    for (let node of alien.childNodes) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            node.textContent = data.newWord;
+            break;
+        }
     }
 });
 
@@ -396,7 +479,7 @@ function updatePlayerPositions(players) {
         nameDisplay.className = "name-display";
         nameDisplay.id = `name-display-${player}`;
         setDisplayName(player)
-
+        
         playerElement.appendChild(wordDisplay);
         playerElement.appendChild(nameDisplay);
 
@@ -443,6 +526,48 @@ function handleInputChange(event) {
         wordDisplay.innerText = currentWord;
     }
 }
+
+socket.on("update_cooldown", ({ startTime, character }) => {
+    // Update cooldown on the input bar
+    const cooldownElement1 = document.getElementById("input-cd");
+    
+    const COOLDOWN_DURATION = 30000; // 60s in ms
+
+    const now = Date.now();
+    const elapsed = now - startTime;
+    const remaining = Math.max(COOLDOWN_DURATION - elapsed, 0);
+    const percent = Math.min((remaining / COOLDOWN_DURATION) * 50, 50); // max 50%
+
+    // Set width to 0% instantly
+    cooldownElement1.style.transition = 'none';
+    cooldownElement1.style.width = '0%';
+
+    const inputBox = document.getElementById("input-box");
+    inputBox.classList.remove(`border-color-${character}`);
+
+    setTimeout(() => {
+        cooldownElement1.style.transition = `width ${remaining}ms linear`;
+        cooldownElement1.style.width = `${percent}%`;
+    }, 50); // 50ms is usually enough
+    
+    // Optional: Log when cooldown ends (30s later)
+    setTimeout(() => {
+        console.log(`Magic cooldown over`);
+        inputBox.classList.add(`border-color-${character}`);
+    }, 30000);
+});
+
+socket.on("update_cooldown_global", ({ playerId, toggle, character }) => {
+    // Update cooldown on the player's square to everyone
+    const player = document.getElementById(`player-${playerId}`);
+
+    if (toggle) {
+        player.classList.add(`border-color-${character}`)
+    }
+    else {
+        player.classList.remove(`border-color-${character}`)
+    }
+});
 
 // Function to update word displays for all players
 function updateWordDisplay(playerId, word) {
@@ -497,17 +622,26 @@ function drawLaserBeam(playerId, alienId, character) {
 }
 
 // Function to update word display color
-function updateWordDisplayColor(playerId, isCorrect) {
+function updateWordDisplayColor(playerId, isCorrect, isMagic, character) {
     const wordDisplay = document.getElementById(`word-display-${playerId}`);
     if (!wordDisplay) return;
 
-    // Add the correct/incorrect class
-    wordDisplay.classList.add(isCorrect ? "correct" : "incorrect");
+    if (isMagic) {
+        wordDisplay.classList.add(`bg-color-${character}`);
+        setTimeout(() => {
+            wordDisplay.classList.remove(`bg-color-${character}`);
+        }, 500); // Match the duration of the color transition
+    }
+    else {
+        // Add the correct/incorrect class
+        wordDisplay.classList.add(isCorrect ? "correct" : "incorrect");
+        // Remove the class after a short delay
+        setTimeout(() => {
+            wordDisplay.classList.remove(isCorrect ? "correct" : "incorrect");
+        }, 500); // Match the duration of the color transition
+    }
 
-    // Remove the class after a short delay
-    setTimeout(() => {
-        wordDisplay.classList.remove(isCorrect ? "correct" : "incorrect");
-    }, 500); // Match the duration of the color transition
+
 }
 
 let countdownTimer = null;
@@ -574,7 +708,7 @@ socket.on("alert_warning", (message) => {
         toast: true,
         icon: "warning",
         title: message,
-        position: "top",
+        position: "middle",
         background: "#ffff00",
         color: "#000",
         showConfirmButton: false,
