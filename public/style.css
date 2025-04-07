@@ -9,6 +9,11 @@ body {
     height: 100svh;
 }
 
+#cover-star {
+    height: 100%;
+    width: 100%;
+}
+
 h1, h2, h3 {
     font-family: 'Orbitron', sans-serif; /* Futuristic font */
     color: #e94560; /* Vibrant pink */
@@ -93,7 +98,8 @@ button:disabled {
     padding-left: 20px;
     border-radius: 20px;
     background-color: rgba(167, 49, 251, 0.05);
-    box-shadow: 0 0 10px rgba(233, 69, 96, 0.5) 
+    box-shadow: 0 0 10px rgba(233, 69, 96, 0.5);
+    overflow: scroll;
 }
 #room-title {
     font-size: 30px;
@@ -307,6 +313,7 @@ button:disabled {
     display: flex;
     justify-content: center;
     align-items: center;
+    user-select: none;
 }
 .arrow:hover {
     transform: translateY(-50%) scale(1.2);
@@ -428,7 +435,30 @@ button:disabled {
     background: #e94560;
     bottom: 175px;
     left: 0;
+    box-shadow: 0 0 10px #e94560;
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.health-bar {
+    position: absolute;
+    width: 100%;
+    height: 11px;
+    background: rgba(255, 0, 0, 0.5);
+    bottom: 177px;
+    left: 0;
     box-shadow: 0 0 10px #e94560; 
+    transition: width 0.3s ease-in;
+}
+
+.shield-bar {
+    position: absolute;
+    width: 10%;
+    height: 11px;
+    background: rgba(0, 0, 255, 0.3);
+    bottom: 192px;
+    left: 0;
+    box-shadow: 0 0 4px #0000ee; 
+    transition: width 0.3s ease-in;
 }
 
 /* Player container */
@@ -464,6 +494,7 @@ button:disabled {
     box-shadow: 0 0 10px rgba(233, 69, 96, 0.5); /* Glow effect */
     max-width: 25%;
     word-wrap: break-word;
+    transition: background-color 0.5s;
 }
 
 /* Name display below the player */
@@ -481,6 +512,23 @@ button:disabled {
     box-shadow: 0 0 10px rgba(233, 69, 96, 0.5); /* Glow effect */
     max-width: 20%;
     word-wrap: break-word;
+    max-height: 16px;
+}
+/* Input cd */
+.input-cd {
+    position: absolute;
+    bottom: 130px;
+    height: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px;
+    font-size: 16px;
+    width: 50%;
+    max-width: 300px;
+    text-align: center;
+    border-radius: 5px;
+    color: #fff;
+    pointer-events: none;
 }
 
 /* Alien word box */
@@ -495,6 +543,7 @@ button:disabled {
     text-align: center;
     display: flex;
     justify-content: center;
+    transition: top 0.2s ease, left 0.2s ease;
 }
 
 /* Alien body box */
@@ -526,11 +575,10 @@ button:disabled {
     width: 50%;
     max-width: 300px;
     text-align: center;
-    background: rgba(255, 255, 255, 0.1);
-    border: 2px solid #e94560;
+    background: rgba(255, 255, 255, 0.05);
     border-radius: 5px;
     color: #fff;
-    box-shadow: 0 0 10px rgba(233, 69, 96, 0.5); /* Glow effect */
+    outline: none;
 }
 #input-box::placeholder {
     color: #aaa;
@@ -626,37 +674,107 @@ button:disabled {
 }
 
 .bg-color-Nulla {
-    box-shadow: 0 0 6px #ffffff;
-    background-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 0 2px #ffffff;
+    background-color: rgba(255, 255, 255, 0.25);
 }
 .bg-color-Jacky {
-    box-shadow: 0 0 6px #ff00ff;
-    background-color: rgba(255, 0, 255, 0.4);
+    box-shadow: 0 0 2px #ff00ff;
+    background-color: rgba(255, 0, 255, 0.25);
 }
 .bg-color-Pewya {
-    box-shadow: 0 0 6px #0000ff;
-    background-color: rgba(0, 0, 255, 0.4);
+    box-shadow: 0 0 2px #0000ff;
+    background-color: rgba(0, 0, 255, 0.25);
 }
 .bg-color-Nutty {
-    box-shadow: 0 0 6px #00ff00;
-    background-color: rgba(0, 255, 0, 0.4);
+    box-shadow: 0 0 2px #00ff00;
+    background-color: rgba(0, 255, 0, 0.25);
 }
 .bg-color-Yoda {
-    box-shadow: 0 0 6px #ffff00;
-    background-color: rgba(255, 255, 0, 0.4);
+    box-shadow: 0 0 2px #ffff00;
+    background-color: rgba(255, 255, 0, 0.25);
 }
 .bg-color-Arthur {
-    box-shadow: 0 0 6px #ff9900;
-    background-color: rgba(255, 99, 0, 0.4);
+    box-shadow: 0 0 2px #ff9900;
+    background-color: rgba(255, 99, 0, 0.25);
 }
 .bg-color-Power {
-    box-shadow: 0 0 6px #ff0000;
-    background-color: rgba(255, 0, 0, 0.4);
+    box-shadow: 0 0 2px #ff0000;
+    background-color: rgba(255, 0, 0, 0.25);
 }
 .bg-color-Tuxedo {
-    box-shadow: 0 0 6px #000000;
-    background-color: rgba(0, 0, 0, 0.4);
+    box-shadow: 0 0 2px #000000;
+    background-color: rgba(0, 0, 0, 0.25);
 }
+
+
+.bg-color-Nulla1 {
+    box-shadow: 0 0 6px #ffffff;
+    background-color: rgba(255, 255, 255, 0.2);
+}
+.bg-color-Jacky1 {
+    box-shadow: 0 0 6px #ff00ff;
+    background-color: rgba(255, 0, 255, 0.2);
+}
+.bg-color-Pewya1 {
+    box-shadow: 0 0 6px #0000ff;
+    background-color: rgba(0, 0, 255, 0.2);
+}
+.bg-color-Nutty1 {
+    box-shadow: 0 0 6px #00ff00;
+    background-color: rgba(0, 255, 0, 0.2);
+}
+.bg-color-Yoda1 {
+    box-shadow: 0 0 6px #ffff00;
+    background-color: rgba(255, 255, 0, 0.2);
+}
+.bg-color-Arthur1 {
+    box-shadow: 0 0 6px #ff9900;
+    background-color: rgba(255, 99, 0, 0.2);
+}
+.bg-color-Power1 {
+    box-shadow: 0 0 6px #ff0000;
+    background-color: rgba(255, 0, 0, 0.2);
+}
+.bg-color-Tuxedo1 {
+    box-shadow: 0 0 6px #000000;
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+
+.border-color-Nulla {
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5); /* Glow effect */
+}
+.border-color-Jacky {
+    border: 2px solid #ff00ff;
+    box-shadow: 0 0 10px rgba(255, 0, 255, 0.5); /* Glow effect */
+}
+.border-color-Pewya {
+    border: 2px solid #0000ff;
+    box-shadow: 0 0 10px rgba(0, 0, 255, 0.5); /* Glow effect */
+}
+.border-color-Nutty {
+    border: 2px solid #00ff00;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.5); /* Glow effect */
+}
+.border-color-Yoda {
+    border: 2px solid #ffff00;
+    box-shadow: 0 0 10px rgba(255, 255, 0, 0.5); /* Glow effect */
+}
+.border-color-Arthur {
+    border: 2px solid #ff9900;
+    box-shadow: 0 0 10px rgba(255, 99, 0, 0.5); /* Glow effect */
+}
+.border-color-Power {
+    border: 2px solid #ff0000;
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.5); /* Glow effect */
+}
+.border-color-Tuxedo {
+    border: 2px solid #000000;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); /* Glow effect */
+}
+
+
 
 @keyframes fadeLaser {
     0% {
