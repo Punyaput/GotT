@@ -708,14 +708,13 @@ socket.on("alert_warning", (message) => {
         toast: true,
         icon: "warning",
         title: message,
-        position: "middle",
-        background: "#ffff00",
-        color: "#000",
+        position: "top",
+        background: "rgba(255, 255, 0, 0.25)",
+        color: "#fff",
         showConfirmButton: false,
         timer: 1500,
     });
 });
-
 
 socket.emit("get_rooms");
 
