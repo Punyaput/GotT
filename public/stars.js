@@ -32,7 +32,7 @@ function createStars() {
     }
 
     // Append the star container to the body
-    document.getElementById("cover-star").appendChild(starContainer);
+    document.body.appendChild(starContainer);
 }
 
 // Call this function when the page loads
