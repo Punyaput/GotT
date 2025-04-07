@@ -736,7 +736,5 @@ function adjustHeight() {
     document.getElementById("star-container").style.height = `${window.visualViewport.height}px`;
 }
 
-adjustHeight()
-
 window.visualViewport.addEventListener("resize", adjustHeight);
 window.visualViewport.addEventListener("scroll", adjustHeight);
