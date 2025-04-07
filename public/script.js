@@ -10,7 +10,6 @@ let isReady = false; // Track the player's ready state
 let isHead = false; // Track if the player is the head
 let currentWord = ""; // Track the current word being typed
 let playerElements = {}; // Store player elements for updating positions
-
 let characters = ["Nulla", "Jacky", "Pewya", "Nutty", "Yoda", "Arthur", "Power", "Tuxedo"];
 let currentIndex = 0;
 
@@ -155,7 +154,6 @@ socket.on("player_list", (players) => {
             ${blankButton}
         `;
         playerList.appendChild(playerDiv);
-        // socket.emit('retrieve_character');
         
         if (player.id == socket.id) {
             const characterSelection = document.createElement("div");
@@ -318,12 +316,17 @@ socket.on("color_input_cooldown", (playerCharacter) => {
     inputBox.classList.add(`border-color-${playerCharacter}`);
     console.log(playerCharacter);
 
+    // Add cd frame to input box
+    const inputCDFrame = document.createElement("div");
+    inputCDFrame.classList.add("input-cd-frame");
+    gameContainer.appendChild(inputCDFrame);
+
     // Add cd to input box
     const inputCD = document.createElement("div");
     inputCD.id = "input-cd";
     inputCD.classList.add("input-cd");
     inputCD.classList.add(`bg-color-${playerCharacter}1`);
-    gameContainer.appendChild(inputCD);
+    inputCDFrame.appendChild(inputCD);
 });
 
 socket.on("update_player_characters", (data) => {
@@ -434,14 +437,6 @@ socket.on("update_alien_word", (data) => {
     }
 });
 
-// // Handle keydown event for typing
-// document.addEventListener("keydown", (event) => {
-//     if (document.getElementById("game-screen").style.display === "block") {
-//         const key = event.key.toLowerCase();
-//         socket.emit("player_input", { key: key });
-//     }
-// });
-
 // Function to update player positions based on the number of players
 function updatePlayerPositions(players) {
     let playerContainer = document.getElementById("player-container");
@@ -531,12 +526,12 @@ socket.on("update_cooldown", ({ startTime, character }) => {
     // Update cooldown on the input bar
     const cooldownElement1 = document.getElementById("input-cd");
     
-    const COOLDOWN_DURATION = 30000; // 60s in ms
+    const COOLDOWN_DURATION = 30000; // 30s in ms
 
     const now = Date.now();
     const elapsed = now - startTime;
     const remaining = Math.max(COOLDOWN_DURATION - elapsed, 0);
-    const percent = Math.min((remaining / COOLDOWN_DURATION) * 50, 50); // max 50%
+    const percent = Math.min((remaining / COOLDOWN_DURATION) * 100, 100); // max 50%
 
     // Set width to 0% instantly
     cooldownElement1.style.transition = 'none';
@@ -713,13 +708,15 @@ socket.on("alert_warning", (message) => {
         color: "#fff",
         showConfirmButton: false,
         timer: 1500,
+
     });
 });
 
+
 socket.emit("get_rooms");
 
-function printAll() {
-    socket.emit('print_all')
+function printAll(password) {
+    socket.emit('print_all', password);
 }
 
 function howToPlay() {
