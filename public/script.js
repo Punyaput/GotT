@@ -707,7 +707,7 @@ socket.on("alert_warning", (message) => {
         background: "rgba(255, 255, 0, 0.25)",
         color: "#fff",
         showConfirmButton: false,
-        timer: 1500,
+        timer: 2000,
 
     });
 });
