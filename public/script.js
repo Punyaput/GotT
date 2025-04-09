@@ -10,7 +10,7 @@ let isReady = false; // Track the player's ready state
 let isHead = false; // Track if the player is the head
 let currentWord = ""; // Track the current word being typed
 let playerElements = {}; // Store player elements for updating positions
-let characters = ["Nulla", "Jacky", "Pewya", "Nutty", "Yoda", "Arthur", "Power", "Tuxedo"];
+let characters = ["Nulla", "Jacky", "Pewya", "Natty", "Yoda", "Arthur", "Power", "Tuxedo"];
 let currentIndex = 0;
 
 function setName() {
@@ -143,7 +143,7 @@ socket.on("player_list", (players) => {
         const blankButton = !player.is_head && !isHead
             ? `<div class="blank-button"></div>`
             : "";
-        const chosenCatIcon = `<div class="chosen-cat" id="chosen-cat-${player.id}"> <img class="character-image2" src="./images/${player.character}TN2.png"> </div>`
+        const chosenCatIcon = `<div class="chosen-cat" id="chosen-cat-${player.id}"> <img class="character-image2" src="./images/cats/${player.character}TN1.png"> </div>`
 
         playerDiv.innerHTML = `
             ${chosenCatIcon}
@@ -162,11 +162,12 @@ socket.on("player_list", (players) => {
 
             characterSelection.innerHTML = 
             `<div class="character-container">
-                <div class="character fade-in" id="character"> <img id="character-image1" class="character-image1" src="./images/${characters[currentIndex]}TN1.png"></div>
+                <div class="character fade-in" id="character"> <img id="character-image1" class="character-image1" src="./images/cats/${characters[currentIndex]}TN1.png"></div>
             </div>
             <div class="arrow left" onclick="prevCharacter()">&#9664;</div>
             <div class="arrow right" onclick="nextCharacter()">&#9654;</div>
             <button class="select-btn" onclick="selectCharacter()">Select</button>`;
+            document.getElementById("character").classList.add("bg-color-" + characters[currentIndex]);
         }
     });
     updateReadyButton(); // Update the button based on head status and ready state
@@ -174,7 +175,7 @@ socket.on("player_list", (players) => {
 
 socket.on('character_changed', (data) => {
     chosenCharacter = data.character;
-    document.getElementById("chosen-cat-" + data.id).innerHTML = `<img class="character-image2" src="./images/${data.character}TN2.png">`
+    document.getElementById("chosen-cat-" + data.id).innerHTML = `<img class="character-image2" src="./images/cats/${data.character}TN1.png">`
 });
 
 function updateCharacter(direction) {
@@ -183,7 +184,8 @@ function updateCharacter(direction) {
     
     setTimeout(() => {
         document.getElementById("character").textContent = characters[currentIndex];
-        document.getElementById("character").innerHTML = `<img id="character-image1" class="character-image1">`
+        document.getElementById("character").innerHTML = `<img id="character-image1" class="character-image1">`;
+        document.getElementById("character").classList.add("bg-color-" + characters[currentIndex]);
         document.getElementById("character").classList.remove("fade-out-left", "fade-out-right");
         document.getElementById("character").classList.add("fade-in");
         changeCharacterBG1(characters[currentIndex]);
@@ -191,17 +193,19 @@ function updateCharacter(direction) {
 }
 
 function prevCharacter() {
+    document.getElementById("character").classList.remove("bg-color-" + characters[currentIndex]);
     currentIndex = (currentIndex - 1 + characters.length) % characters.length;
     updateCharacter('left');
 }
 
 function nextCharacter() {
+    document.getElementById("character").classList.remove("bg-color-" + characters[currentIndex]);
     currentIndex = (currentIndex + 1) % characters.length;
     updateCharacter('right');
 }
 
 function changeCharacterBG1(character) {
-    document.getElementById("character-image1").src = "./images/" + character + "TN1.png";
+    document.getElementById("character-image1").src = "./images/cats/" + character + "TN1.png";
 }
 
 function selectCharacter() {
@@ -314,7 +318,6 @@ socket.on("color_input_cooldown", (playerCharacter) => {
     const inputBox = document.getElementById("input-box");
 
     inputBox.classList.add(`border-color-${playerCharacter}`);
-    console.log(playerCharacter);
 
     // Add cd frame to input box
     const inputCDFrame = document.createElement("div");
@@ -332,7 +335,7 @@ socket.on("color_input_cooldown", (playerCharacter) => {
 socket.on("update_player_characters", (data) => {
     data.forEach((player) => {
         document.getElementById(`player-${player.id}`).classList.add(`border-color-${player.character}`);
-        document.getElementById("igchar-" + player.id).src = "./images/" + player.character + "TN2.png";
+        document.getElementById("igchar-" + player.id).src = "./images/cats/" + player.character + "TN1.png";
         document.getElementById("player-" + player.id).classList.add("bg-color-" + player.character);
     });
 });
@@ -371,28 +374,74 @@ socket.on("alien_destroyed", (alienId) => {
 });
 
 // Handle alien spawned
-socket.on("alien_spawned", (alien) => {
+socket.on("alien_spawned", ({alienId, alienWord, alienPosition, alienType}) => {
+    const container = document.getElementById("game-aliens-container");
     // Create Word
     const alienElement = document.createElement("div");
-    alienElement.id = alien.id;
+    alienElement.id = alienId;
     alienElement.className = "alien";
     
-    setTimeout(() => {
-        const alienWordRect = alienElement.getBoundingClientRect();
-        const xpos = Math.max(0, Math.min(alien.position.x, 100 - ((alienWordRect.width / window.innerWidth) * 100)));
-        alienElement.style.left = `${xpos}%`;
-    }, 0);
+    // Create image
+    const alienWordImg = document.createElement("img");
+    alienWordImg.src = alienWord;
+    alienElement.appendChild(alienWordImg);
+    
+    // Add to DOM first so we can measure the image
+    container.prepend(alienElement);
+    
+    // When image loads, adjust position
+    alienWordImg.onload = function() {
+        const imgWidth = this.width;
+        const containerWidth = container.offsetWidth;
+        
+        // Convert percentage position to pixels
+        let leftPos = (containerWidth * alienPosition.x / 100) - (imgWidth / 2);
+        
+        // Ensure the image stays within bounds
+        leftPos = Math.max(0, leftPos); // Don't go past left edge
+        leftPos = Math.min(containerWidth - imgWidth, leftPos); // Don't go past right edge
+        
+        // Convert back to percentage for consistent scaling
+        const adjustedLeftPercent = (leftPos / containerWidth) * 100;
+        
+        // Set final position
+        alienElement.style.left = `${adjustedLeftPercent}%`;
+        alienElement.style.top = `${alienPosition.y}px`;
+        alienElement.style.width = `${imgWidth}px`; // Set width to image width
+        
+        // Create Body (after position is set)
+        const alienBody = document.createElement("div");
+        alienBody.className = "alien-square";
+        alienBody.style.backgroundImage = `url("./images/aliens/${alienType}.png")`;
+        alienElement.appendChild(alienBody);
 
-    alienElement.style.top = `${alien.position.y}px`;
-    alienElement.textContent = alien.word;
-    document.getElementById("game-aliens-container").prepend(alienElement);
-
-    // Create Body
-    const alienBody = document.createElement("div");
-    alienBody.className = "alien-square";
-    alienElement.appendChild(alienBody);
-
+        alienElement.dataset.originalLeftPercent = alienPosition.x;
+        alienElement.dataset.originalLeftPixel = (container.offsetWidth * alienPosition.x / 100) - (imgWidth / 2);
+    };
 });
+
+function repositionAliens() {
+    const container = document.getElementById("game-aliens-container");
+    const containerWidth = container.offsetWidth;
+    
+    document.querySelectorAll('.alien').forEach(alien => {
+        const img = alien.querySelector('img[style*="visibility: visible"], img:not([style*="visibility"])');
+        if (!img?.complete) return;
+        
+        const originalPercent = parseFloat(alien.dataset.originalLeftPercent);
+        const imgWidth = img.width;
+        const imgHeight = img.height;
+        
+        // Maintain height during resize
+        alien.style.height = `${imgHeight}px`;
+        
+        const leftPos = (containerWidth * originalPercent / 100) - (imgWidth / 2);
+        const clampedLeft = Math.max(0, Math.min(containerWidth - imgWidth, leftPos));
+        
+        alien.style.left = `${clampedLeft}px`;
+    });
+}
+  
 
 // Handle alien moved
 socket.on("alien_moved", (data) => {
@@ -411,7 +460,7 @@ socket.on("alien_reshuffled", (data) => {
             alienElement.style.left = `${xpos}%`;
         }, 0);
     }
-
+    repositionAliens();
 });
 
 socket.on("display_absorption", (toggleState) => {
@@ -427,14 +476,59 @@ socket.on("display_absorption", (toggleState) => {
 
 socket.on("update_alien_word", (data) => {
     const alien = document.getElementById(data.id);
-
-    // Find the text node inside the parent
-    for (let node of alien.childNodes) {
-        if (node.nodeType === Node.TEXT_NODE) {
-            node.textContent = data.newWord;
-            break;
-        }
-    }
+    const container = document.getElementById("game-aliens-container");
+    
+    // Store current dimensions and position
+    const currentHeight = alien.offsetHeight;
+    const currentTop = alien.style.top;
+    const currentLeft = alien.style.left;
+    const originalPercent = parseFloat(alien.dataset.originalLeftPercent);
+    
+    // Create new image container (hidden initially)
+    const newImg = document.createElement('img');
+    newImg.style.visibility = 'hidden';
+    newImg.style.position = 'absolute';
+    newImg.src = data.newWord;
+    
+    alien.appendChild(newImg);
+    
+    newImg.onload = function() {
+        const containerWidth = container.offsetWidth;
+        const newWidth = this.width;
+        const newHeight = this.height;
+        
+        // Calculate new position
+        const leftPos = (containerWidth * originalPercent / 100) - (newWidth / 2);
+        const clampedLeft = Math.max(0, Math.min(containerWidth - newWidth, leftPos));
+        
+        // Apply new styles smoothly
+        requestAnimationFrame(() => {
+            // Set temporary minimum height
+            alien.style.minHeight = `${Math.max(currentHeight, newHeight)}px`;
+            
+            // Update dimensions and make visible
+            alien.style.width = `${newWidth}px`;
+            alien.style.left = `${clampedLeft}px`;
+            alien.style.top = currentTop;
+            
+            // Cross-fade images
+            const oldImg = alien.querySelector('img:not([style*="visibility: hidden"])');
+            if (oldImg) {
+                oldImg.style.opacity = '0';
+                setTimeout(() => alien.removeChild(oldImg), 300);
+            }
+            setTimeout(() => {
+            newImg.style.visibility = 'visible';
+            newImg.style.opacity = '1';
+            newImg.style.position = '';
+            }, 300);
+            
+            // Reset min-height after transition
+            setTimeout(() => {
+                alien.style.minHeight = '';
+            }, 300);
+        });
+    };
 });
 
 // Function to update player positions based on the number of players
@@ -547,7 +641,6 @@ socket.on("update_cooldown", ({ startTime, character }) => {
     
     // Optional: Log when cooldown ends (30s later)
     setTimeout(() => {
-        console.log(`Magic cooldown over`);
         inputBox.classList.add(`border-color-${character}`);
     }, 30000);
 });
@@ -712,19 +805,13 @@ socket.on("alert_warning", (message) => {
     });
 });
 
-
 socket.emit("get_rooms");
 
-function printAll(password) {
-    socket.emit('print_all', password);
+function openHowToPlay() {
+    document.getElementById('howToPlayModal').style.display = 'flex';
 }
-
-function howToPlay() {
-    console.log("not implemented yet");
-}
-
-function leaderBoard() {
-    console.log("not implemented yet");
+function closeHowToPlay() {
+    document.getElementById('howToPlayModal').style.display = 'none';
 }
 
 function adjustHeight() {
@@ -732,5 +819,5 @@ function adjustHeight() {
     document.getElementById("star-container").style.height = `${window.visualViewport.height}px`;
 }
 
-window.visualViewport.addEventListener("resize", adjustHeight);
-window.visualViewport.addEventListener("scroll", adjustHeight);
+window.addEventListener("resize", adjustHeight);
+window.addEventListener("scroll", adjustHeight);
