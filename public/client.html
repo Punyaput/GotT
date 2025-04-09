@@ -9,19 +9,20 @@
     <link href="style.css" rel="stylesheet">
     <script src="script.js"></script>
     <script src="stars.js"></script>
+    <script src="leaderboard.js"></script>
 </head>
 <body>
     <div id="name-form">
-        <div class="first-logo">logo</div>
+        <img class="first-logo" src="./images/Logo1.png">
         <h1>Guardian of the Typurr</h1>
         <div class="name-and-play-container">
             <input type="text" autocomplete="off" id="player-name" placeholder="Enter your name">
             <button onclick="setName()">Play</button>
         </div>
-        <button class="how-to-play-btn" onclick="howToPlay()">How to play</button>
-        <button class="leaderboard-btn" onclick="leaderBoard()">Leaderboard</button>
+        <button class="how-to-play-btn" onclick="openHowToPlay()">How to play</button>
+        <button class="leaderboard-btn" onclick="openLeaderboard()">Leaderboard</button>
     </div>
-
+    
     <div id="lobby" style="display: none;">
         <h1>Lobby</h1>
         <button id="create-room-btn" onclick="createRoom()">Create Room</button>
@@ -48,6 +49,128 @@
             <h2>Game Over!</h2>
             <p id="countdown"></p>
             <button id="return-to-lobby-button" onclick="returnToLobby()">Return to Lobby</button>
+        </div>
+    </div>
+
+    <!-- How to Play Modal -->
+    <div ondblclick="closeHowToPlay()" id="howToPlayModal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeHowToPlay()">&times;</span>
+            <img src="./images/Logo1.png" alt="Game Logo" class="modal-logo">
+            <p class="description">Guardian of the Typurr is a fast-paced multiplayer typing game where you play cats and delete aliens. Type fast, survive longer, and reach high waves!</p>
+            <div class="gif-section">
+                <h3>Gameplay</h3>
+                <img src="./images/placeholder.gif" alt="How to Play GIF" class="howto-gif">
+            </div>
+            <div class="character-section">
+                <h3>Characters</h3>
+                <p class="description">You can choose to play as one of these 7 cats, each having their unique abilities-command! Execute abilities by typing in commands using " / "</p>
+                <div class="characterM white bg-color-Nulla">
+                    <img src="./images/cats/NullaTN1.png" alt="Nulla">
+                    <h3 class="name-Nulla">Nulla</h3>
+                    <h4>[The Purity Cat]</h4>
+                    <p>No power, default cat</p>
+                </div>
+                <div class="characterM purple bg-color-Jacky">
+                    <img src="./images/cats/JackyTN1.png" alt="Jacky">
+                    <h3 class="name-Jacky">Jacky</h3>
+                    <h4>[The Wizard Cat]</h4>
+                    <ul>
+                        <li>/reduce : Shorten 4 longest alien words to 1 letter</li>
+                        <li>/binary : Cut 75% of alien words in half</li>
+                    </ul>
+                </div>
+                <div class="characterM blue bg-color-Pewya">
+                    <img src="./images/cats/PewyaTN1.png" alt="Pewya">
+                    <h3 class="name-Pewya">Pewya</h3>
+                    <h4>[The Cybersec Cat]</h4>
+                    <ul>
+                        <li>/security : +2 shields (max 10)</li>
+                        <li>/absorb : Invincible for 3 seconds</li>
+                    </ul>
+                </div>
+                <div class="characterM green bg-color-Natty">
+                    <img src="./images/cats/NattyTN1.png" alt="Natty">
+                    <h3 class="name-Natty">Natty</h3>
+                    <h4>[The Nature Cat]</h4>
+                    <ul>
+                        <li>/heal : Heal 3 hearts instantly</li>
+                        <li>/regen : Heal 5 hearts over 30 seconds</li>
+                    </ul>
+                </div>
+                <div class="characterM yellow bg-color-Yoda">
+                    <img src="./images/cats/YodaTN1.png" alt="Yoda">
+                    <h3 class="name-Yoda">Yoda</h3>
+                    <h4>[The Lemon Cat]</h4>
+                    <ul>
+                        <li>/push : Push aliens up 25%</li>
+                        <li>/teleport : 70% chance to send aliens back to top</li>
+                        <li>/reshuffle : Shuffle alien positions</li>
+                    </ul>
+                </div>
+                <div class="characterM orange bg-color-Arthur">
+                    <img src="./images/cats/ArthurTN1.png" alt="Arthur">
+                    <h3 class="name-Arthur">Arthur</h3>
+                    <h4>[The Timekeeper Cat]</h4>
+                    <ul>
+                        <li>/freeze : Freeze aliens for 6 seconds</li>
+                        <li>/slow : Half speed for 10 seconds</li>
+                    </ul>
+                </div>
+                <div class="characterM red bg-color-Power">
+                    <img src="./images/cats/PowerTN1.png" alt="Power">
+                    <h3 class="name-Power">Power</h3>
+                    <h4>[The Destroyer Cat]</h4>
+                    <ul>
+                        <li>/fork : Delete 4 random aliens</li>
+                        <li>/purge : 50% chance to delete each alien</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="alien-section">
+                <h3>Alien Variants</h3>
+                <div class="alien-box">
+                    <img src="./images/aliens/Rectangy.png" alt="Alien Variant 1">
+                    <img src="./images/aliens/Morphy.png" alt="Alien Variant 2">
+                    <img src="./images/aliens/Smoky.png" alt="Alien Variant 3">
+                </div>
+                <p class="alien-desc">This game includes various alien types with special traits and abilities- and each wave of aliens gets progressively more challenging. Stay alert!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaderboard Modal -->
+    <div id="leaderboardModal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeLeaderboard()">&times;</span>
+            <h2>Leaderboard (This is a Mockup!)</h2>
+            <!-- Filter Dropdown -->
+            <div class="filter-container">
+                <label for="player-filter">Filter by Players:</label>
+                <select id="player-filter" onchange="filterLeaderboard()">
+                    <option value="all">All Players</option>
+                    <option value="1">1 Player</option>
+                    <option value="2">2 Players</option>
+                    <option value="3">3 Players</option>
+                    <option value="4">4 Players</option>
+                </select>
+            </div>
+            <!-- Leaderboard Table -->
+            <table id="leaderboard">
+                <thead>
+                    <tr>
+                        <th>Team Name</th>
+                        <th>Player1</th>
+                        <th>Player2</th>
+                        <th>Player3</th>
+                        <th>Player4</th>
+                        <th>Waves Reached</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-body">
+                    <!-- Dynamic rows go here -->
+                </tbody>
+            </table>
         </div>
     </div>
 </body>
