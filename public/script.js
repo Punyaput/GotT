@@ -10,7 +10,7 @@ let isReady = false; // Track the player's ready state
 let isHead = false; // Track if the player is the head
 let currentWord = ""; // Track the current word being typed
 let playerElements = {}; // Store player elements for updating positions
-let characters = ["Nulla", "Jacky", "Pewya", "Natty", "Yoda", "Arthur", "Power", "Tuxedo"];
+let characters = ["Nulla", "Jacky", "Pewya", "Natty", "Yoda", "Arthur", "Power"];
 let currentIndex = 0;
 
 function setName() {
@@ -35,6 +35,7 @@ function exitRoom() {
 }
 
 function readyUp() {
+    playSoundClick();
     socket.emit("player_ready");
     isReady = !isReady; // Toggle the ready state
     updateReadyButton(); // Update the button text
@@ -97,7 +98,7 @@ socket.on("room_list", (rooms) => {
         `
         <h3>${roomId}</h3>
         <p>${rooms[roomId].playerCount} / 4 Players</p>
-        <button onclick="joinRoom('${roomId}')" ${rooms.playerCount >= 4 || rooms.gameInProgress ? "disabled" : ""}>Join</button>
+        <button onclick="joinRoom('${roomId}'), playSoundClick()" ${rooms.playerCount >= 4 || rooms.gameInProgress ? "disabled" : ""}>Join</button>
         `;
 
         roomList.appendChild(roomDiv);
@@ -164,9 +165,9 @@ socket.on("player_list", (players) => {
             `<div class="character-container">
                 <div class="character fade-in" id="character"> <img id="character-image1" class="character-image1" src="./images/cats/${characters[currentIndex]}TN1.png"></div>
             </div>
-            <div class="arrow left" onclick="prevCharacter()">&#9664;</div>
-            <div class="arrow right" onclick="nextCharacter()">&#9654;</div>
-            <button class="select-btn" onclick="selectCharacter()">Select</button>`;
+            <div class="arrow left" onclick="prevCharacter(), playSoundClick()">&#9664;</div>
+            <div class="arrow right" onclick="nextCharacter(), playSoundClick()">&#9654;</div>
+            <button class="select-btn" onclick="selectCharacter(), playSoundClick()">Select</button>`;
             document.getElementById("character").classList.add("bg-color-" + characters[currentIndex]);
         }
     });
@@ -256,7 +257,6 @@ socket.on("game_started", (data) => {
     // Update the UI to reflect all players as ready
     isReady = true;
     updateReadyButton();
-    console.log(`Current room: ${currentRoom}`);
 
     // Add game logic here
 
@@ -271,6 +271,15 @@ socket.on("game_started", (data) => {
     gameAliensContainer.id = "game-aliens-container";
     gameContainer.appendChild(gameOverLine);
     gameContainer.appendChild(gameAliensContainer);
+
+    // Draw Help Button
+    const helpIG = document.createElement("button");
+    helpIG.classList.add("help-IG-btn");
+    helpIG.onclick = function () {
+        openHowToPlayIG();
+        playSoundClick()
+    };
+    gameContainer.appendChild(helpIG);
 
     // Draw health bar
     const healthBar = document.createElement("div");
@@ -309,8 +318,8 @@ socket.on("game_started", (data) => {
     updatePlayerPositions(data.players);
 });
 
-socket.on("request_client_color_input_change", (data) => {
-    socket.emit("request_server_color_input_change", 0);
+socket.on("request_client_color_input_change", () => {
+    socket.emit("request_server_color_input_change");
 });
 
 socket.on("color_input_cooldown", (playerCharacter) => {
@@ -374,7 +383,7 @@ socket.on("alien_destroyed", (alienId) => {
 });
 
 // Handle alien spawned
-socket.on("alien_spawned", ({alienId, alienWord, alienPosition, alienType}) => {
+socket.on("alien_spawned", ({alienId, alienWord, alienPosition, alienType }) => {
     const container = document.getElementById("game-aliens-container");
     // Create Word
     const alienElement = document.createElement("div");
@@ -474,61 +483,92 @@ socket.on("display_absorption", (toggleState) => {
     }
 });
 
+
+// Store active image loads per alien
+let activeAlienUpdates = {};
+
 socket.on("update_alien_word", (data) => {
     const alien = document.getElementById(data.id);
     const container = document.getElementById("game-aliens-container");
-    
-    // Store current dimensions and position
-    const currentHeight = alien.offsetHeight;
+    if (!alien || !container) return;
+
+    // Cancel any pending update for this alien
+    if (activeAlienUpdates[data.id]) {
+        const { newImg, oldImg, timeout } = activeAlienUpdates[data.id];
+        if (newImg && newImg.parentNode) alien.removeChild(newImg);
+        if (oldImg && oldImg.parentNode) alien.removeChild(oldImg);
+        clearTimeout(timeout);
+    }
+
+    // Store current state
     const currentTop = alien.style.top;
-    const currentLeft = alien.style.left;
     const originalPercent = parseFloat(alien.dataset.originalLeftPercent);
-    
-    // Create new image container (hidden initially)
+    const currentImg = alien.querySelector('img');
+
+    // Create new image (hidden initially)
     const newImg = document.createElement('img');
-    newImg.style.visibility = 'hidden';
-    newImg.style.position = 'absolute';
+    newImg.style.cssText = `
+        visibility: hidden;
+        position: absolute;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    `;
     newImg.src = data.newWord;
-    
-    alien.appendChild(newImg);
-    
+
+    // Track this update
+    activeAlienUpdates[data.id] = {
+        newImg,
+        oldImg: currentImg,
+        timeout: null
+    };
+
     newImg.onload = function() {
+        // Skip if this update was cancelled
+        if (!activeAlienUpdates[data.id] || activeAlienUpdates[data.id].newImg !== newImg) {
+            alien.removeChild(newImg);
+            return;
+        }
+
         const containerWidth = container.offsetWidth;
         const newWidth = this.width;
         const newHeight = this.height;
-        
+
         // Calculate new position
         const leftPos = (containerWidth * originalPercent / 100) - (newWidth / 2);
         const clampedLeft = Math.max(0, Math.min(containerWidth - newWidth, leftPos));
-        
-        // Apply new styles smoothly
-        requestAnimationFrame(() => {
-            // Set temporary minimum height
-            alien.style.minHeight = `${Math.max(currentHeight, newHeight)}px`;
-            
-            // Update dimensions and make visible
-            alien.style.width = `${newWidth}px`;
-            alien.style.left = `${clampedLeft}px`;
-            alien.style.top = currentTop;
-            
-            // Cross-fade images
-            const oldImg = alien.querySelector('img:not([style*="visibility: hidden"])');
-            if (oldImg) {
-                oldImg.style.opacity = '0';
-                setTimeout(() => alien.removeChild(oldImg), 300);
+
+        // Apply new styles
+        alien.style.cssText = `
+            top: ${currentTop};
+            left: ${clampedLeft}px;
+            width: ${newWidth}px;
+            min-height: ${newHeight}px;
+        `;
+
+        // Cross-fade images
+        if (currentImg) {
+            currentImg.style.opacity = '0';
+        }
+
+        setTimeout(() => {
+        newImg.style.cssText = `
+            visibility: visible;
+            position: static;
+            opacity: 1;
+        `;}, 300);
+
+        // Schedule cleanup
+        activeAlienUpdates[data.id].timeout = setTimeout(() => {
+            if (currentImg && currentImg.parentNode === alien) {
+                alien.removeChild(currentImg);
             }
-            setTimeout(() => {
-            newImg.style.visibility = 'visible';
-            newImg.style.opacity = '1';
-            newImg.style.position = '';
-            }, 300);
-            
-            // Reset min-height after transition
-            setTimeout(() => {
-                alien.style.minHeight = '';
-            }, 300);
-        });
+            alien.style.minHeight = '';
+            delete activeAlienUpdates[data.id];
+        }, 300);
     };
+
+    // Add new image to DOM
+    alien.appendChild(newImg);
 });
 
 // Function to update player positions based on the number of players
@@ -739,6 +779,8 @@ socket.on("game_over", () => {
     document.getElementById("countdown").innerText = `Returning to lobby in 20 seconds...`;
     document.getElementById("game-over-screen").style.display = "flex";
 
+    activeAlienUpdates = {};
+
     // Start a 20-second countdown
     let countdown = 20;
     countdownTimer = setInterval(() => {
@@ -805,13 +847,25 @@ socket.on("alert_warning", (message) => {
     });
 });
 
+socket.on("emit_sound", (sound) => {
+    const sfxShoot = new Audio('./sounds/' + sound + '.mp3');
+    sfxShoot.volume = 0.5; // Set volume (0.0 to 1.0)
+    sfxShoot.play();
+});
+
 socket.emit("get_rooms");
 
 function openHowToPlay() {
     document.getElementById('howToPlayModal').style.display = 'flex';
 }
+function openHowToPlayIG() {
+    document.getElementById('howToPlayModalIG').style.display = 'flex';
+}
 function closeHowToPlay() {
     document.getElementById('howToPlayModal').style.display = 'none';
+}
+function closeHowToPlayIG() {
+    document.getElementById('howToPlayModalIG').style.display = 'none';
 }
 
 function adjustHeight() {
@@ -821,3 +875,21 @@ function adjustHeight() {
 
 window.addEventListener("resize", adjustHeight);
 window.addEventListener("scroll", adjustHeight);
+
+socket.on("display_disconnected", (data) => {
+    document.getElementById("disconnectScreenSpam").style.display = "flex";
+    document.getElementById("disconnectReason").innerText = "Reason: " + data.reason;
+});
+
+function playSoundClick() {
+    const sfxShoot = new Audio('./sounds/click.mp3');
+    sfxShoot.volume = 0.5; // Set volume (0.0 to 1.0)
+    sfxShoot.play();
+}
+
+socket.on("reset_visual1", () => {
+    document.getElementById("game-screen").style.display = "none";
+    document.getElementById("lobby").style.display = "none";
+    document.getElementById("player-name").value = "";
+    document.getElementById("name-form").style.display = "flex";
+})
