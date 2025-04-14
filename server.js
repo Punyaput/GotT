@@ -23,8 +23,77 @@ let availableRoomIds = Array.from({ length: MAX_ROOMS }, (_, i) => i + 1); // Po
 let gameState = {}; // Stores game state: {room_id: {aliens: [{id: string, word: string, position: {x: number, y: number}, speed: int}], 
 // waveNumber: int, waveStarted: boolean, alienSpawned: int, alienDestroyed: int, gameOver: boolean}}
 // health: int, shield: int,
-const magics = ["/reduce", "/binary", "/security", "/absorb", "/heal", "/regen", "/push", "/teleport", "/reshuffle", "/freeze", "/slow", "/fork", "/purge"];
+const magics = ["/reduce", "/binary", "/security", "/absorb", "/heal", "/regen", "/push", "/teleport", "/reshuffle", "/freeze", "/slow", "/fork", "/purge", "/kill_all"];
 const availableCharacters = ["Nulla", "Jacky", "Pewya", "Natty", "Yoda", "Arthur", "Power", "Tuxedo"];
+const RATE_LIMIT_MS = 150; // How fast is considered "spam"
+const MAX_WARNINGS = 2;
+const WARNING_INTERVAL_MS = 3000; // Wait at least this long between warnings
+const WARNING_RESET_MS = 10000; // Time until warnings reset after good behavior
+
+// Store client rate limit state
+const clientRateLimits = new Map();
+
+const wordsNetwork = [
+    "OSI", "Network", "Application", "Session", "Data-Link", "Transport", "User", "Message",
+    "Transmit", "Receive", "RS232", "Ethernet", "Hardware", "Software", "Protocol", "Social",
+    "HTTP", "HTTPS", "Encoding", "Decoding", "Encryption", "Logical", "CMD", "WWW", "Download",
+    "Sync", "Node", "Routing", "Host", "Server", "Client", "Model", "Command", "Log", "Upload",
+    "WebSocket", "E-mail", "Data", "Packet", "Security", "Ring", "Admin", "Extranet", "Put",
+    "Bus", "ENIAC", "Telephone", "FiberOptic", "Cable", "Coaxial", "LAN", "WAN", "FAX", "Get",
+    "Teleconference", "Satellite", "Microwave", "Wireless", "Wi-Fi", "ASCII", "DNS", "Update",
+    "Code", "Bandwidth", "Frequency", "Signal", "Twisted-Pair", "Multiplexing", "Broadband",
+    "Carrier", "Asynchronous", "Transmission", "Half-Duplex", "Full-Duplex", "Simplex", "Status",
+    "Interface", "Modem", "Synchronous", "Send", "FDM", "TDM", "Transmit", "Topology", "Directory",
+    "Ajarnjack", "Ajarnpiya", "Aloha", "Huffman", "Collision", "CSMA", "Tree", "Mesh", "Bye",
+    "Token", "CSMA", "Compression", "192.168.1.1", "Security", "Integrity", "Internet", "ACK",
+    "Parity", "Error", "CRC", "Hamming", "Checking", "Synchronous", "JS", "HTML", "Communicate",
+    "CRC", "Caesar", "Cipher", "Key", "Distribution", "Disconnect", "File", "Password", "CPU",
+    "Protection", "Firewall", "RSA", "Digital", "Analog", "Signatures", "Virus", "Bus", "FTP",
+    "Hacking", "Public", "Private", "IP", "TCP", "Handshake", "Cable", "Switch", "Algorithm", "Route",
+    "Buffer", "Frame", "Ping", "Bitrate", "Bandwidth", "Bridge", "Network", "Traffic", "Port", "Node",
+    "Proxy", "URL", "MAC", "Gateway", "DDoS", "DoS", "Host", "Server", "Peer", "Server", "0", "1",
+    "5G", "4G", "ISP", "Dijkstra", "Session", "Route", "Bluetooth", "UDP", "SWP", "Connect",
+    "Sensor", "Repeater", "Media", "Frequency", "Period", "Analog", "Digital", "Morse"
+];
+
+const wordsSoftware = [
+    "SDLC", "DevOps", "Frontend", "Backend", "FullStack", "JavaScript", "TypeScript", "Python", "Java", "Kotlin", 
+    "C#", "CPlusPlus", "Ruby", "PHP", "HTML", "CSS", "ReactJS", "Angular", "VueJS", "Agile", "Scrum", "C++", "Frontend",
+    "NodeJS", "Express", "Django", "Flask", "Spring", "REST", "Graph", "WebSocket", "Microservice", "UI", "Backend",
+    "API", "Database", "SQL", "AWS", "Azure", "Photoshop", "Sprint", "Sprint", "System", "UX", "Tester", "SoftEN", "CPU",
+    "PostgreSQL", "MongoDB", "Redis", "Diagram", "Firebase", "Docker", "Cloud", "Git", "Kanban", "Wireframe", "Timeline",
+    "GitHub", "GitLab", "Agile", "Scrum", "Kanban", "Sprint", "UI", "UX", "Wireframe", "Agile", "Scrum", "RAD", "Development",
+    "Prototype", "Testing", "Unit", "Integration", "Figma", "Selenium", "Cypress", "Agile", "Scrum", "Component", "Visual",
+    "Debug", "Log", "Monitor", "OAuth", "Agile", "Scrum", "Deployment", "SA", "BA", "Business", "User", "User", "Coding",
+    "Firewall", "VPN", "Scalability", "LoadBalancer", "Cache", "Linux", "Bash", "Shell", "Automation", "GitHub", "Vue",
+    "CDN", "BigO", "Flowchart", "Blockchain", "Web", "Agile", "Scrum", "API", "Class", "Class", "Art", "Deploy", "API",
+    "Refactor", "Design", "Factory", "Observer", "Render", "Agile", "Scrum", "Agile", "Scrum", "Agile", "Scrum", "AI",
+]
+
+const wordsGeneral = [
+    "Apple", "Banana", "Orange", "Grape", "Mango",
+    "Peach", "Pear", "Lemon", "Lime", "Cherry",
+    "Berry", "Kiwi", "Melon", "Plum", "Fig",
+    "Guava", "Papaya", "DragonFruit", "Avocado", "Coconut",
+    "Carrot", "Tomato", "Potato", "Onion", "Garlic",
+    "Pepper", "Lettuce", "Spinach", "Broccoli", "Cauliflower",
+    "Cucumber", "Radish", "Beet", "Celery", "Bean",
+    "Pea", "Corn", "Pumpkin", "Eggplant", "Zucchini",   
+    "Chair", "Table", "Lamp", "Clock", "Mirror",
+    "Vase", "Bottle", "Cup", "Plate", "Bowl",
+    "Knife", "Fork", "Spoon", "Glass", "Towel",
+    "Basket", "Bucket", "Brush", "Broom", "Mop",
+    "Phone", "Laptop", "Tablet", "Camera", "Remote",
+    "Speaker", "Headphone", "Keyboard", "Mouse", "Monitor",
+    "Charger", "Battery", "Flashlight", "Radio", "Drone",
+    "Shirt", "Pants", "Dress", "Jacket", "Sweater",
+    "Socks", "Shoes", "Hat", "Gloves", "Scarf",
+    "Tree", "Flower", "Rock", "River", "Mountain",
+    "Cloud", "Star", "Moon", "Sun", "Rain",
+    "Book", "Pen", "Paper", "Bag", "Key",
+    "Toy", "Ball", "Doll", "Block", "Puzzle",
+    "Coin", "Stamp", "Ticket", "Card", "Gift"
+]
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'client.html')); // Serve the HTML file
@@ -33,9 +102,23 @@ app.get('/', (req, res) => {
 io.on('connection', (socket) => {
     const playerId = socket.id;
     players[playerId] = { name: "", room_id: null, ready: false , character: "Nulla", cooldown: null }; // Initialize player data
-    console.log(`Player ${playerId} connected.`);
+    console.log(`✅ Player ${playerId} connected.`);
+
+    socket.emit("reset_visual1");
 
     socket.on('set_name', (data) => {
+
+        // VALIDATE DATA (VERY IMPORTANT!!!)
+        if (!data || typeof data.name !== "string") {
+            socket.emit('error', { message: 'Invalid action.' });
+            return;
+        }
+
+        if (data.name.length > 100) {
+            socket.emit('error', { message: 'Name too long. (100 Characters limit)' });
+            return;
+        }
+
         if (players[playerId].name === "") {
         players[playerId].name = data.name;
         socket.emit('name_set', { name: data.name });
@@ -46,6 +129,13 @@ io.on('connection', (socket) => {
     });
 
     socket.on('change_character', (character) => {
+
+        // VALIDATE DATA (VERY IMPORTANT!!!)
+        if (!character || typeof character !== "string") {
+            socket.emit('error', { message: 'Invalid action.' });
+            return;
+        }
+
         const roomId = players[playerId].room_id
         if (gameState[roomId]) {
             socket.emit('error', { message: "You can't change character mid-game" });
@@ -80,7 +170,7 @@ io.on('connection', (socket) => {
         players[playerId].room_id = roomId;
 
         socket.join(roomId);
-        console.log(`✅ Player ${playerId} created and joined ${roomId}.`);
+        console.log(`➕ Player ${playerId} created and joined ${roomId}.`);
 
         updateRoomList();
 
@@ -89,8 +179,20 @@ io.on('connection', (socket) => {
     });
 
     socket.on('join_room', (data) => {
+
+        // VALIDATE DATA (VERY IMPORTANT!!!)
+        if (!data || typeof data.room_id !== "string") {
+            socket.emit('error', { message: 'Invalid action.' });
+            return;
+        }
+
         if (players[playerId].room_id) {
             socket.emit('error', { message: 'You are already in a room.' });
+            return;
+        }
+
+        if (!players[playerId].name) {
+            socket.emit('error', { message: 'Invalid action.' });
             return;
         }
 
@@ -115,7 +217,7 @@ io.on('connection', (socket) => {
         players[playerId].room_id = roomId;
 
         socket.join(roomId);
-        console.log(`✅ Player ${playerId} joined ${roomId}.`);
+        console.log(`➕ Player ${playerId} joined ${roomId}.`);
 
         updateRoomList();
 
@@ -155,13 +257,12 @@ io.on('connection', (socket) => {
 
             socket.leave(roomId);
 
-            console.log(`🚪 Player ${playerId} exited ${roomId}.`);
+            console.log(`➖ Player ${playerId} exited ${roomId}.`);
 
             if (rooms[roomId].players.length === 0) { // Delete room if empty
                 delete rooms[roomId];
                 // Return the room ID to the pool
                 const roomNumber = parseInt(roomId.split(' ')[1]);
-                // console.log("returning room " + roomNumber);
                 availableRoomIds.push(roomNumber);
                 availableRoomIds.sort((a, b) => a - b); // Keep the pool sorted
             }
@@ -171,7 +272,6 @@ io.on('connection', (socket) => {
         players[playerId].room_id = null;
         players[playerId].ready = false;
 
-        // io.emit('room_list', Object.fromEntries(Object.entries(rooms).map(([id, room]) => [id, room.players.length])));
         updateRoomList();
 
         socket.emit('exited_room');
@@ -181,10 +281,17 @@ io.on('connection', (socket) => {
     });
 
     socket.on('kick_player', (data) => {
+
+        // VALIDATE DATA (VERY IMPORTANT!!!)
+        if (!data || typeof data.target_player_id !== "string") {
+            socket.emit('error', { message: 'Invalid action.' });
+            return;
+        }
+
         const roomId = players[playerId].room_id;
         const targetPlayerId = data.target_player_id;
     
-        console.log(`Player ${playerId} is trying to kick ${targetPlayerId} from ${roomId}.`);
+        console.log(`🦶 Player ${playerId} is trying to kick ${targetPlayerId} from ${roomId}.`);
     
         if (!roomId) {
             socket.emit('error', { message: 'You are not in a room.' });
@@ -216,7 +323,6 @@ io.on('connection', (socket) => {
 
             // Update ready_count -1 if the kicked player is ready
             if (players[targetPlayerId].ready) {
-                console.log('update ready count from ' + rooms[roomId].ready_count)
                 rooms[roomId].ready_count -= 1;
             }
 
@@ -230,7 +336,7 @@ io.on('connection', (socket) => {
             const targetSocket = io.sockets.sockets.get(targetPlayerId); // Get the kicked player's socket
             if (targetSocket) {
                 targetSocket.leave(roomId); // Make the kicked player leave the room
-                console.log(`🚪 Player ${targetPlayerId} was kicked from ${roomId}.`);
+                console.log(`➖ Player ${targetPlayerId} was kicked from ${roomId}.`);
             } else {
                 console.error(`Player ${targetPlayerId} not found in sockets.`);
             }
@@ -320,16 +426,23 @@ io.on('connection', (socket) => {
                 waveNumber: 1, // Initialize waveNumber to 1
                 waveStarted: false,
                 gameOver: false,
-                aliensSpawned: 0, // Track aliens spawned in the current wave
-                aliensDestroyed: 0, // Track aliens destroyed in the current wave
+                aliensSpawned: 0,
+                aliensDestroyed: 0,
                 health: 100,
                 shield: 0,
                 absorbActive: false,
                 regenAmount: 0,
+                morphyCD: null,
             };
 
             // Start the game loop
             startGameLoop(roomId);
+
+            if (!gameState[roomId].morphyCD) {
+                gameState[roomId].morphyCD = setInterval(() => {
+                    transformAllMorphy(roomId);
+                }, 5000); // every 5 seconds
+            }
 
             io.to(roomId).emit('game_started', rooms[roomId]);
             io.emit('request_client_color_input_change', 0)
@@ -347,17 +460,38 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('request_server_color_input_change', (data) => {
+    socket.on('request_server_color_input_change', () => {
+        const roomId = players[playerId]?.room_id;
+        if (!roomId || !gameState[roomId]) {
+            socket.emit('error', { message: "You're not in a room" });
+            return;
+        }
         socket.emit("color_input_cooldown", players[playerId].character);
     });
 
     // Handle word submission
     socket.on("submit_word", (data) => {
+        ///// RATE LIMIT /////
+        checkSpam(socket.id);
+
+        // VALIDATE DATA (VERY IMPORTANT!!!)
+        if (!data || typeof data.word !== "string") {
+            socket.emit('error', { message: 'Invalid action.' });
+            return;
+        }
+        if (data.word.length > 500) {
+            socket.emit('error', { message: 'Submission too long.' });
+            return;
+        }
+
         const playerId = socket.id;
         const roomId = players[playerId]?.room_id;
         const word = data.word.toLowerCase();
     
-        if (!roomId || !gameState[roomId]) return;
+        if (!roomId || !gameState[roomId]) {
+            socket.emit('error', { message: "You're not in a game." });
+            return;
+        }
 
         // If it's a special command... and check validity
         if (word[0] == "/") {
@@ -390,8 +524,8 @@ io.on('connection', (socket) => {
     
         // Destroy the alien if the word is correct
         if (targetAlien) {
-            // Transform all morphy
-            transformAllMorphy(roomId);
+
+            io.to(roomId).emit("emit_sound", "laser");
 
             gameState[roomId].aliens = gameState[roomId].aliens.filter(alien => alien.id !== targetAlien.id);
             io.to(roomId).emit("alien_destroyed", targetAlien.id);
@@ -439,14 +573,14 @@ io.on('connection', (socket) => {
             const roomNumber = parseInt(roomId.split(' ')[1]);
             availableRoomIds.push(roomNumber);
             availableRoomIds.sort((a, b) => a - b); // Keep the pool sorted
-            
+
             // Delete the room
             delete rooms[roomId];
             delete gameState[roomId];
 
             socket.leave(roomId);
     
-            console.log(`Room ${roomId} deleted and all players returned to lobby.`);
+            console.log(`🚪 In ${roomId}, deleted and all players returned to lobby.`);
         }
 
     });
@@ -471,6 +605,7 @@ io.on('connection', (socket) => {
                     // Stop the game loop for this room
                     if (gameState[roomId] && gameState[roomId].gameLoop) {
                         clearInterval(gameState[roomId].gameLoop);
+                        clearInterval(gameState[roomId].morphyCD);
                     }
 
                     // Delete the room and game state
@@ -482,14 +617,17 @@ io.on('connection', (socket) => {
                     availableRoomIds.push(roomNumber);
                     availableRoomIds.sort((a, b) => a - b); // Keep the pool sorted
 
-                    console.log(`Room ${roomId} deleted and all players disconnected.`);
+                    console.log(`🚪 ${roomId} deleted and all players disconnected.`);
                 }
             }
 
-            console.log(`⚠️ Player ${playerId} disconnected from ${roomId}.`);
+            console.log(`➖ Player ${playerId} disconnected from ${roomId}.`);
         }
 
-        console.log(`Player ${playerId} disconnected.`);
+        console.log(`🚫 Player ${playerId} disconnected.`);
+        
+        // Remove rate limit object if any
+        clientRateLimits.delete(socket.id);
 
         delete players[playerId]; // Remove player from global players list
 
@@ -518,6 +656,74 @@ io.on('connection', (socket) => {
         socket.emit('received_name_to_display', {id: playerId1, name: players[playerId1].name})
     });
 
+    function checkSpam(socketId) {
+        const now = Date.now();
+        
+        // Initialize client state if not exists
+        if (!clientRateLimits.has(socketId)) {
+            clientRateLimits.set(socketId, {
+                lastSubmit: 0,
+                warnings: 0,
+                lastWarnTime: 0,
+                warningResetTimeout: null
+            });
+        }
+        
+        const clientState = clientRateLimits.get(socketId);
+        
+        // Check if submitting too fast
+        if (now - clientState.lastSubmit < RATE_LIMIT_MS) {
+            // Only warn if enough time passed since last warning
+            if (now - clientState.lastWarnTime >= WARNING_INTERVAL_MS) {
+                clientState.warnings++;
+                clientState.lastWarnTime = now;
+                
+                // Clear any existing reset timeout
+                if (clientState.warningResetTimeout) {
+                    clearTimeout(clientState.warningResetTimeout);
+                }
+                
+                if (clientState.warnings > MAX_WARNINGS) {
+                    // Disconnect the client
+                    socket.emit('error', { 
+                        message: 'Disconnected for excessive spamming' 
+                    });
+                    socket.emit("display_disconnected", {reason : "Spamming"});
+                    console.log(`🚫 Disconnected ${socketId} for spamming`);
+                    socket.disconnect(true);
+                    clientRateLimits.delete(socketId);
+                    return;
+                } else {
+                    // Send warning
+                    socket.emit('error', {
+                        message: `Warning ${clientState.warnings}/${MAX_WARNINGS}: Slow down!`
+                    });
+                    console.log(`⚠️ Warning ${clientState.warnings} to ${socketId}`);
+                }
+                
+                // Schedule warnings reset after good behavior period
+                clientState.warningResetTimeout = setTimeout(() => {
+                    if (clientRateLimits.has(socketId)) {
+                        const state = clientRateLimits.get(socketId);
+                        state.warnings = 0;
+                        console.log(`♻️ Reset warnings for ${socketId}`);
+                    }
+                }, WARNING_RESET_MS);
+            }
+            
+            // Reject this submission
+            return;
+        }
+        
+        // Valid submission - update last submit time
+        clientState.lastSubmit = now;
+        
+        // If they waited long enough between submissions, reduce warnings
+        if (now - clientState.lastWarnTime > WARNING_RESET_MS) {
+            clientState.warnings = Math.max(0, clientState.warnings - 1);
+        }
+    }
+
     function handleMagicWord(playerId, roomId, word) {
         const player = players[playerId];
         let magicSuccess = false;
@@ -545,6 +751,7 @@ io.on('connection', (socket) => {
         switch (players[playerId].character) {
             case "Jacky":
                 if (word == "/reduce") {
+                    io.to(roomId).emit("emit_sound", "retro");
                     // Sort aliens by word length DESC, and if tied, by position.y ASC
                     const top4Aliens = gameState[roomId].aliens
                         .slice() // Clone to avoid mutating original
@@ -561,7 +768,7 @@ io.on('connection', (socket) => {
                     gameState[roomId].aliens.forEach(alien => {
                         if (top4Aliens.includes(alien)) {
                             alien.word = alien.word[0];
-                            io.to(roomId).emit('update_alien_word', { id: alien.id, newWord: generateWordImageImg(alien.word) });
+                            io.to(roomId).emit('update_alien_word', { id: alien.id, newWord: generateWordImageImg(alien.word, alien.type)});
                         
                             io.to(roomId).emit("word_submitted", {
                                 playerId: playerId,
@@ -575,12 +782,13 @@ io.on('connection', (socket) => {
                     magicSuccess = true;
                 }
                 else if (word == "/binary") {
+                    io.to(roomId).emit("emit_sound", "retro");
                     gameState[roomId].aliens.forEach(alien => {
                         const cutBinary = Math.random() < 0.75;
                         if (cutBinary) {
                             const half = Math.ceil(alien.word.length / 2);
                             alien.word = alien.word.slice(0, half); // Cut word in half
-                            io.to(roomId).emit('update_alien_word', { id: alien.id, newWord: generateWordImageImg(alien.word) });
+                            io.to(roomId).emit('update_alien_word', { id: alien.id, newWord: generateWordImageImg(alien.word, alien.type)});
                             
                             io.to(roomId).emit("word_submitted", {
                                 playerId: playerId,
@@ -602,11 +810,13 @@ io.on('connection', (socket) => {
                     if (gameState[roomId].shield == 100) {addedShield = 0}
                     gameState[roomId].shield += addedShield;
                     io.to(roomId).emit("update_shield", addedShield);
+                    io.to(roomId).emit("emit_sound", "shield");
                     magicSuccess = true;
                 }
                 else if (word == "/absorb") {
                     // Activate absorption
                     gameState[roomId].absorbActive = true;
+                    io.to(roomId).emit("emit_sound", "shield");
                     io.to(roomId).emit("display_absorption", true);
     
                     // If a timeout is already counting down, cancel it
@@ -632,12 +842,13 @@ io.on('connection', (socket) => {
                     if (gameState[roomId].health == 100) {addedHealth = 0}
                     gameState[roomId].health += addedHealth;
                     io.to(roomId).emit("update_health", addedHealth);
+                    io.to(roomId).emit("emit_sound", "bing");
                     magicSuccess = true;
                 }
                 else if (word == "/regen") {
                     // This is black magic
                     let ticks = 0;
-    
+                    io.to(roomId).emit("emit_sound", "bing");
                     const regenInterval = setInterval(() => {
                         // Stop after 5 ticks (5 x 6 seconds = 30 seconds)
                         if (ticks >= 5 || !gameState[roomId]) {
@@ -647,6 +858,7 @@ io.on('connection', (socket) => {
                         if (gameState[roomId].health != 100) {
                             gameState[roomId].health += 10;
                             io.to(roomId).emit("update_health", 10);
+                            io.to(roomId).emit("emit_sound", "cash");
                         }
                         ticks++;
                     }, 6000);
@@ -656,6 +868,7 @@ io.on('connection', (socket) => {
                 break;
             case "Yoda":
                 if (word == "/push") {
+                    io.to(roomId).emit("emit_sound", "woosh");
                     // Push all aliens up by 40%, if off-screen, delete them
                     gameState[roomId].aliens.forEach(alien => {
                         // Move up approximately 25%
@@ -690,6 +903,7 @@ io.on('connection', (socket) => {
                 }
                 else if (word == "/teleport") {
                     // Statistically move half of the aliens to the top
+                    io.to(roomId).emit("emit_sound", "woosh");
                     gameState[roomId].aliens.forEach(alien => {
                         const moveTop = Math.random() < 0.75;
                         if (moveTop) {
@@ -701,6 +915,7 @@ io.on('connection', (socket) => {
                 }
                 else if (word == "/reshuffle") {
                     // Reshuffle all aliens x position
+                    io.to(roomId).emit("emit_sound", "woosh");
                     gameState[roomId].aliens.forEach(alien => {
                         alien.position.x = Math.random() * 95;
                         io.to(roomId).emit('alien_reshuffled', { id: alien.id, position: alien.position.x });
@@ -711,6 +926,7 @@ io.on('connection', (socket) => {
                 break;
             case "Arthur":
                 if (word == "/freeze") {
+                    io.to(roomId).emit("emit_sound", "pop");
                     // Freeze 6 seconds
                     gameState[roomId].aliens.forEach(alien => {
                         alien.speed = 0; // Set speed to 0 (freeze)
@@ -730,6 +946,7 @@ io.on('connection', (socket) => {
                     magicSuccess = true;
                 }
                 else if (word == "/slow") {
+                    io.to(roomId).emit("emit_sound", "pop");
                     // Slow 10 seconds
                     gameState[roomId].aliens.forEach(alien => {
                         alien.speed /= 2; // Divide speed by 2 (slowing down)
@@ -753,6 +970,7 @@ io.on('connection', (socket) => {
                 break;
             case "Power":
                 if (word == "/fork") {
+                    io.to(roomId).emit("emit_sound", "slap");
                     const aliens = gameState[roomId].aliens;
         
                     // Shuffle the aliens array
@@ -766,7 +984,7 @@ io.on('connection', (socket) => {
     
                     // Perform actions on the selected aliens
                     selectedAliens.forEach(alienSelected => {
-    
+
                         // Broadcast the result to all players in the room
                         io.to(roomId).emit("word_submitted", {
                             playerId: playerId,
@@ -800,6 +1018,7 @@ io.on('connection', (socket) => {
                     magicSuccess = true;
                 }
                 else if (word == "/purge") {
+                    io.to(roomId).emit("emit_sound", "slap");
                     gameState[roomId].aliens.forEach(alienTarget => {
     
                         if (Math.random() < 0.5) {
@@ -840,6 +1059,7 @@ io.on('connection', (socket) => {
                 break;
             case "Tuxedo":
                 if (word == "/reduce") {
+                    io.to(roomId).emit("emit_sound", "retro");
                     // Sort aliens by word length DESC, and if tied, by position.y ASC
                     const top4Aliens = gameState[roomId].aliens
                         .slice() // Clone to avoid mutating original
@@ -856,7 +1076,7 @@ io.on('connection', (socket) => {
                     gameState[roomId].aliens.forEach(alien => {
                         if (top4Aliens.includes(alien)) {
                             alien.word = alien.word[0];
-                            io.to(roomId).emit('update_alien_word', { id: alien.id, newWord: generateWordImageImg(alien.word) });
+                            io.to(roomId).emit('update_alien_word', { id: alien.id, newWord: generateWordImageImg(alien.word, alien.type)});
                         
                             io.to(roomId).emit("word_submitted", {
                                 playerId: playerId,
@@ -870,12 +1090,13 @@ io.on('connection', (socket) => {
                     magicSuccess = true;
                 }
                 else if (word == "/binary") {
+                    io.to(roomId).emit("emit_sound", "retro");
                     gameState[roomId].aliens.forEach(alien => {
                         const cutBinary = Math.random() < 0.75;
                         if (cutBinary) {
                             const half = Math.ceil(alien.word.length / 2);
                             alien.word = alien.word.slice(0, half); // Cut word in half
-                            io.to(roomId).emit('update_alien_word', { id: alien.id, newWord: generateWordImageImg(alien.word) });
+                            io.to(roomId).emit('update_alien_word', { id: alien.id, newWord: generateWordImageImg(alien.word, alien.type)});
                             
                             io.to(roomId).emit("word_submitted", {
                                 playerId: playerId,
@@ -894,12 +1115,14 @@ io.on('connection', (socket) => {
                     if (gameState[roomId].shield == 100) {addedShield = 0}
                     gameState[roomId].shield += addedShield;
                     io.to(roomId).emit("update_shield", addedShield);
+                    io.to(roomId).emit("emit_sound", "shield");
                     magicSuccess = true;
                 }
                 else if (word == "/absorb") {
                     // Activate absorption
                     gameState[roomId].absorbActive = true;
                     io.to(roomId).emit("display_absorption", true);
+                    io.to(roomId).emit("emit_sound", "shield");
     
                     // If a timeout is already counting down, cancel it
                     if (gameState[roomId].absorbTimeout) {
@@ -921,12 +1144,13 @@ io.on('connection', (socket) => {
                     if (gameState[roomId].health == 100) {addedHealth = 0}
                     gameState[roomId].health += addedHealth;
                     io.to(roomId).emit("update_health", addedHealth);
+                    io.to(roomId).emit("emit_sound", "bing");
                     magicSuccess = true;
                 }
                 else if (word == "/regen") {
                     // This is black magic
                     let ticks = 0;
-    
+                    io.to(roomId).emit("emit_sound", "bing");
                     const regenInterval = setInterval(() => {
                         // Stop after 5 ticks (5 x 6 seconds = 30 seconds)
                         if (ticks >= 5 || !gameState[roomId]) {
@@ -936,12 +1160,14 @@ io.on('connection', (socket) => {
                         if (gameState[roomId].health != 100) {
                             gameState[roomId].health += 10;
                             io.to(roomId).emit("update_health", 10);
+                            io.to(roomId).emit("emit_sound", "cash");
                         }
                         ticks++;
                     }, 6000);
                     magicSuccess = true;
                 }
                 else if (word == "/push") {
+                    io.to(roomId).emit("emit_sound", "woosh");
                     // Push all aliens up by 40%, if off-screen, delete them
                     gameState[roomId].aliens.forEach(alien => {
                         // Move up approximately 25%
@@ -975,6 +1201,7 @@ io.on('connection', (socket) => {
                     magicSuccess = true;
                 }
                 else if (word == "/teleport") {
+                    io.to(roomId).emit("emit_sound", "woosh");
                     // Statistically move half of the aliens to the top
                     gameState[roomId].aliens.forEach(alien => {
                         const moveTop = Math.random() < 0.75;
@@ -986,6 +1213,7 @@ io.on('connection', (socket) => {
                     magicSuccess = true;
                 }
                 else if (word == "/reshuffle") {
+                    io.to(roomId).emit("emit_sound", "woosh");
                     // Reshuffle all aliens x position
                     gameState[roomId].aliens.forEach(alien => {
                         alien.position.x = Math.random() * 95;
@@ -994,6 +1222,7 @@ io.on('connection', (socket) => {
                     magicSuccess = true;
                 }
                 else if (word == "/freeze") {
+                    io.to(roomId).emit("emit_sound", "pop");
                     // Freeze 6 seconds
                     gameState[roomId].aliens.forEach(alien => {
                         alien.speed = 0; // Set speed to 0 (freeze)
@@ -1013,6 +1242,7 @@ io.on('connection', (socket) => {
                     magicSuccess = true;
                 }
                 else if (word == "/slow") {
+                    io.to(roomId).emit("emit_sound", "pop");
                     // Slow 10 seconds
                     gameState[roomId].aliens.forEach(alien => {
                         alien.speed /= 2; // Divide speed by 2 (slowing down)
@@ -1033,8 +1263,8 @@ io.on('connection', (socket) => {
                     magicSuccess = true;
                 }
                 else if (word == "/fork") {
+                    io.to(roomId).emit("emit_sound", "slap");
                     const aliens = gameState[roomId].aliens;
-        
                     // Shuffle the aliens array
                     const shuffledAliens = aliens
                         .map(alien => ({ ...alien })) // Clone to avoid mutating the original list
@@ -1080,6 +1310,7 @@ io.on('connection', (socket) => {
                     magicSuccess = true;
                 }
                 else if (word == "/purge") {
+                    io.to(roomId).emit("emit_sound", "slap");
                     gameState[roomId].aliens.forEach(alienTarget => {
     
                         if (Math.random() < 0.5) {
@@ -1116,14 +1347,49 @@ io.on('connection', (socket) => {
                     });
                     magicSuccess = true;
                 }
+                else if (word == "/kill_all") {
+                    io.to(roomId).emit("emit_sound", "boom");
+                    gameState[roomId].aliens.forEach(alienTarget => {
     
+                        // Broadcast the result to all players in the room
+                        io.to(roomId).emit("word_submitted", {
+                            playerId: playerId,
+                            isMagic: true,
+                            alienId: alienTarget.id,
+                            character: players[playerId].character,
+                            drawLaser: true
+                        });
+
+                        // Filter out targeted alien
+                        gameState[roomId].aliens = gameState[roomId].aliens.filter(alien => alien.id !== alienTarget.id);
+                        // Update the number of aliens destroyed for the current wave
+                        gameState[roomId].aliensDestroyed += 1;
+                        io.to(roomId).emit("alien_destroyed", alienTarget.id);
+                        // Check if the current wave is complete
+                        if (
+                            gameState[roomId].aliensSpawned === gameState[roomId].totalAliens && // All aliens spawned
+                            gameState[roomId].aliensDestroyed === gameState[roomId].totalAliens // All aliens destroyed
+                        ) {
+                            // Safely increment the wave number
+                            if (typeof gameState[roomId].waveNumber === 'number') {
+                                gameState[roomId].waveNumber += 1;
+                            } else {
+                                gameState[roomId].waveNumber = 1; // Fallback to Wave 1 if waveNumber is invalid
+                            }
+                
+                            // Start the next wave
+                            startWave(roomId, gameState[roomId].waveNumber);
+                        }
+                    });
+                    magicSuccess = true;
+                }
                 break;
             default:
                 // Nulla
-                break;
+            break;
         }
 
-        if (magicSuccess) {
+        if (magicSuccess && players[playerId].character !== "Tuxedo") {
             // Set the player's cooldown to the current timestamp
             player.cooldown = Date.now();
         
@@ -1138,11 +1404,18 @@ io.on('connection', (socket) => {
             socket.emit("update_cooldown", { startTime: now, character: player.character });
             io.to(roomId).emit("update_cooldown_global", { playerId: playerId, toggle: false , character: player.character });
         }
-        else {
+        else if (players[playerId].character !== "Tuxedo") {
             // Incorrect (red text)
             io.to(roomId).emit("word_submitted", {
                 playerId: playerId,
                 isCorrect: false,
+            });
+        }
+        else {
+            // Admin (Tuxedo) execute commands with no cooldown, display green text
+            io.to(roomId).emit("word_submitted", {
+                playerId: playerId,
+                isCorrect: true,
             });
         }
     }
@@ -1187,6 +1460,7 @@ function startGameLoop(roomId) {
         // Check if the room still exists and has players
         if (!rooms[roomId] || rooms[roomId].players.length === 0) {
             clearInterval(gameLoop); // Stop the game loop if the room is empty
+            clearInterval(gameState[roomId].morphyCD);
 
             // Clear the spawn interval if it exists
             if (gameState[roomId] && gameState[roomId].spawnIntervals) {
@@ -1211,6 +1485,7 @@ function startGameLoop(roomId) {
 
         if (gameState[roomId].gameOver) {
             clearInterval(gameLoop); // Stop the game loop if the game is over
+            clearInterval(gameState[roomId].morphyCD);
 
             // Clear the spawn interval if it exists
             if (gameState[roomId].spawnIntervals) {
@@ -1220,7 +1495,7 @@ function startGameLoop(roomId) {
             delete gameState[roomId]; // Clean up the game state
             return;
         }
-    }, 1000 / 30); // 30 FPS
+    }, 1000 / 30); // 30 Game ticks
 
     // Store the game loop interval ID in the game state
     gameState[roomId].gameLoop = gameLoop;
@@ -1228,30 +1503,76 @@ function startGameLoop(roomId) {
 
 function cancelAllAlienTimeoutsInRoom(roomId) {
     gameState[roomId].allTimeouts.forEach(id => clearTimeout(id));
-    console.log("All alien timeouts cleared for " + roomId);
 }
 
 function transformAllMorphy(roomId) {
-    gameState[roomId].aliens.forEach(alien => {
-        if (alien.type == "Morphy") {
-            const word = gameState[roomId].aliens[Math.floor(Math.random() * gameState[roomId].aliens.length)].word;
-            alien.word = word;
-            io.to(roomId).emit('update_alien_word', { id: alien.id, newWord: generateWordImageImg(word) });
-        }
+    if (!gameState[roomId]) return;
+    const allAliens = gameState[roomId].aliens;
+    const morphyAliens = allAliens.filter(alien => alien.type === "Morphy");
+
+    morphyAliens.forEach(morphy => {
+        morphy.word = wordsNetwork[Math.floor(Math.random() * wordsNetwork.length)];
+
+        io.to(roomId).emit('update_alien_word', {
+            id: morphy.id,
+            newWord: generateWordImageImg(morphy.word, morphy.type),
+        });
     });
+}
+
+function getRandomMathExpression() {
+    const operators = ['+', '-', '*', '/'];
+    const numOperands = Math.floor(Math.random() * 4) + 2; // 2-5 operands
+    const numOperators = numOperands - 1; // 1-4 operators
+    
+    // Generate random numbers ensuring integer results for division
+    let numbers = [];
+    let ops = [];
+    
+    // First generate all numbers
+    for (let i = 0; i < numOperands; i++) {
+      numbers.push(Math.floor(Math.random() * 12) + 1); // 1-20
+    }
+    
+    // Generate operators with division constraints
+    let divisionCount = 0;
+    for (let i = 0; i < numOperators; i++) {
+      // Limit consecutive divisions and total divisions
+      const lastWasDivision = i > 0 && ops[i-1] === '/';
+      const availableOps = operators.filter(op => 
+        op !== '/' || (!lastWasDivision && divisionCount < 1)
+      );
+      
+      const chosenOp = availableOps[Math.floor(Math.random() * availableOps.length)];
+      ops.push(chosenOp);
+      
+      if (chosenOp === '/') {
+        divisionCount++;
+        // Ensure integer division
+        const factors = getFactors(numbers[i]);
+        numbers[i+1] = factors[Math.floor(Math.random() * factors.length)] || 1;
+      }
+    }
+    
+    // Build the expression string
+    let expression = numbers[0];
+    for (let i = 0; i < ops.length; i++) {
+      expression += ` ${ops[i]} ${numbers[i+1]}`;
+    }
+    return expression;
+}
+  
+// Helper function to get factors of a number (excluding 1)
+function getFactors(n) {
+    const factors = [];
+    for (let i = 2; i <= n; i++) {
+        if (n % i === 0) factors.push(i);
+    }
+    return factors;
 }
 
 function getRandomString(length) {
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789=!@#$%^&*(-)_+[]{}|;:,.<>?';
-    let result = '';
-    for (let i = 0; i < length; i++) {
-      const randomIndex = Math.floor(Math.random() * characters.length);
-      result += characters[randomIndex];
-    }
-    return result;
-}
-function getRandomNumbers(length) {
-    const characters = '0123456789';
     let result = '';
     for (let i = 0; i < length; i++) {
       const randomIndex = Math.floor(Math.random() * characters.length);
@@ -1278,12 +1599,12 @@ function spawnAlienWithDelay(roomId, count, delay, speed, word=null, type=null) 
 }
 
 const { createCanvas } = require('canvas');  // Import canvas creation
-const wordImageCache = new Map();
+// const wordImageCache = new Map();
 
-function generateWordImageImg(text) {
-    if (wordImageCache.has(text)) {
-        return wordImageCache.get(text); // No need to clone since it's server-side
-    }
+function generateWordImageImg(text, type) {
+    // if (wordImageCache.has(text)) {
+    //     return wordImageCache.get(text); // No need to clone since it's server-side
+    // }
 
     // Create server-side canvas
     const canvas = createCanvas(200, 35);  // width and height can be adjusted as needed
@@ -1298,14 +1619,21 @@ function generateWordImageImg(text) {
     ctx.fillStyle = '#ffffff';  // Text color
     ctx.font = '600 16px Arial';
     ctx.textBaseline = 'middle';
-    ctx.fillText(text, 10, canvas.height / 2);
+
+    if (type === "Reavy") {
+        // Flip horizontally
+        ctx.translate(canvas.width, 0);     // Move to the right edge
+        ctx.scale(-1, 1);                   // Flip the x-axis
+        ctx.fillText(text, 10, canvas.height / 2); // Draw flipped
+    } else {
+        ctx.fillText(text, 10, canvas.height / 2); // Normal draw
+    }
 
     // Convert canvas to data URL (image in PNG format)
     const dataUrl = canvas.toDataURL('image/png');
 
     // Return the data URL instead of an image element
     const img = dataUrl;  // Just use the base64 string directly
-    wordImageCache.set(text, img);
 
     return img;
 }
@@ -1313,31 +1641,8 @@ function generateWordImageImg(text) {
 // Spawn an alien
 function spawnAlien(roomId, speed, specificWord, specificCoordX, specificType) {
     if (!gameState[roomId]) return;
-    
-    const words = [
-                  "OSI", "Network", "Application", "Session", "Data-Link", "Transport", "User", "Message",
-                  "Transmit", "Receive", "RS232", "Ethernet", "Hardware", "Software", "Protocol", "Social",
-                  "HTTP", "HTTPS", "Encoding", "Decoding", "Encryption", "Logical", "CMD", "WWW", "Download",
-                  "Sync", "Node", "Routing", "Host", "Server", "Client", "Model", "Command", "Log", "Upload",
-                  "WebSocket", "E-mail", "Data", "Packet", "Security", "Ring", "Admin", "Extranet", "Put",
-                  "Bus", "ENIAC", "Telephone", "FiberOptic", "Cable", "Coaxial", "LAN", "WAN", "FAX", "Get",
-                  "Teleconference", "Satellite", "Microwave", "Wireless", "Wi-Fi", "ASCII", "DNS", "Update",
-                  "Code", "Bandwidth", "Frequency", "Signal", "Twisted-Pair", "Multiplexing", "Broadband",
-                  "Carrier", "Asynchronous", "Transmission", "Half-Duplex", "Full-Duplex", "Simplex", "Status",
-                  "Interface", "Modem", "Synchronous", "Send", "FDM", "TDM", "Transmit", "Topology", "Directory",
-                  "Ajarnjack", "Ajarnpiya", "Aloha", "Huffman", "Collision", "CSMA", "Tree", "Mesh", "Bye",
-                  "Token", "CSMA", "Compression", "192.168.1.1", "Security", "Integrity", "Internet", "ACK",
-                  "Parity", "Error", "CRC", "Hamming", "Checking", "Synchronous", "JS", "HTML", "Communicate",
-                  "CRC", "Caesar", "Cipher", "Key", "Distribution", "Disconnect", "File", "Password",
-                  "Protection", "Firewall", "RSA", "Digital", "Analog", "Signatures", "Virus", "Bus", "FTP",
-                  "Hacking", "Public", "Private", "IP", "TCP", "Handshake", "Cable", "Switch", "Algorithm", "Route",
-                  "Buffer", "Frame", "Ping", "Bitrate", "Bandwidth", "Bridge", "Network", "Traffic", "Port", "Node",
-                  "Proxy", "URL", "MAC", "Gateway", "DDoS", "DoS", "Host", "Server", "Peer", "Server", "0", "1",
-                  "5G", "4G", "ISP", "Dijkstra", "Session", "Route", "Bluetooth", "UDP", "SWP", "Connect",
-                  "Sensor", "Repeater", "Media", "Frequency", "Period", "Analog", "Digital", "Morse"
-                  ]; // Example words
-    
-    const word = words[Math.floor(Math.random() * words.length)];
+
+    let word = wordsNetwork[Math.floor(Math.random() * wordsNetwork.length)];
 
     if (!specificType) {
         if (word.length <= 4) {
@@ -1351,6 +1656,9 @@ function spawnAlien(roomId, speed, specificWord, specificCoordX, specificType) {
         }
     }
 
+    if (specificType === "Reavy" && !specificWord) word = wordsSoftware[Math.floor(Math.random() * wordsSoftware.length)]
+    if (specificType === "Lancey" && !specificWord) word = wordsGeneral[Math.floor(Math.random() * wordsGeneral.length)]
+
     const alien = {
         id: `alien_${Date.now()}`,
         word: specificWord? specificWord : word,
@@ -1358,15 +1666,21 @@ function spawnAlien(roomId, speed, specificWord, specificCoordX, specificType) {
         speed: speed, // Add speed to the alien object
         speedAtBirth: speed,
         status: "normal",
-        type: specificType
+        type: specificType,
     };
 
     gameState[roomId].aliensSpawned += 1;
     gameState[roomId].aliens.push(alien);
 
-
-    // Emit the new alien to all players in the room
-    io.to(roomId).emit('alien_spawned', {alienId: alien.id, alienWord: generateWordImageImg(alien.word), alienPosition: alien.position, alienType: alien.type});
+    // Emit the new alien to all players in the room // Handle Mathy specifically
+    if (specificType === "Mathy") {
+        word = "( " + getRandomMathExpression() + " )";
+        alien.word = eval(word).toString();
+        io.to(roomId).emit('alien_spawned', {alienId: alien.id, alienWord: generateWordImageImg(word, alien.type), alienPosition: alien.position, alienType: alien.type});
+    }
+    else {
+        io.to(roomId).emit('alien_spawned', {alienId: alien.id, alienWord: generateWordImageImg(alien.word, alien.type), alienPosition: alien.position, alienType: alien.type});
+    }
 }
 
 // Move aliens
@@ -1391,8 +1705,6 @@ function resetCooldowns(roomId) {
 
         player.cooldown = null;
     }
-
-    console.log(`All cooldowns cleared for ${roomId}`);
 }
 
 // Check for game over
@@ -1411,10 +1723,12 @@ function checkGameOver(roomId) {
 
             if (!gameState[roomId].absorbActive) {
                 if (gameState[roomId].shield == 0) {
+                    io.to(roomId).emit("emit_sound", "damage");
                     gameState[roomId].health -= 10;
                     io.to(roomId).emit('update_health', -10);
                 }
                 else {
+                    io.to(roomId).emit("emit_sound", "damage");
                     gameState[roomId].shield -= 10;
                     io.to(roomId).emit('update_shield', -10);
                 }
@@ -1423,10 +1737,13 @@ function checkGameOver(roomId) {
             if (gameState[roomId].health == 0) {
                 // Game over
                 gameState[roomId].gameOver = true;
+                io.to(roomId).emit("emit_sound", "gameOver");
                 io.to(roomId).emit('game_over');
                 resetCooldowns(roomId);
                 cancelAllAlienTimeoutsInRoom(roomId);
-                console.log(`Game over in room ${roomId}.`);
+                clearInterval(gameState[roomId].morphyCD);
+                gameState[roomId].morphyCD = null;
+                console.log(`❌ Game over in room ${roomId}.`);
                 return;
             }
 
@@ -1464,106 +1781,108 @@ function startWave(roomId, waveNumber) {
     switch (waveNumber) {
         case 1:
             io.to(roomId).emit('alert_warning', "Wave 1 (10 enemies)");
+            io.to(roomId).emit("emit_sound", "start");
             gameState[roomId].totalAliens = 10;
             sAWD.push(spawnAlienWithDelay(roomId, 10, 1500, 0.5)); // roomId, amount, delay, speed, word=null, type=null
             break;
         case 2:
-            io.to(roomId).emit('alert_warning', "Wave 2 (12 enemies)");
+            io.to(roomId).emit('alert_warning', "Wave 2");
+            io.to(roomId).emit("emit_sound", "clear");
             gameState[roomId].totalAliens = 12;
-            sAWD.push(spawnAlienWithDelay(roomId, 12, 1400, 0.55));
+            sAWD.push(spawnAlienWithDelay(roomId, 12, 1400, 0.5));
             break;
         case 3:
-            io.to(roomId).emit('alert_warning', "Wave 3 (15 enemies)");
+            io.to(roomId).emit('alert_warning', "Wave 3");
+            io.to(roomId).emit("emit_sound", "clear");
             gameState[roomId].totalAliens = 15;
             sAWD.push(spawnAlienWithDelay(roomId, 15, 1300, 0.6));
             break;
         case 4:
-            io.to(roomId).emit('alert_warning', "Wave 4 (19 enemies)");
+            io.to(roomId).emit('alert_warning', "Wave 4");
+            io.to(roomId).emit("emit_sound", "clear");
             gameState[roomId].totalAliens = 19;
             sAWD.push(spawnAlienWithDelay(roomId, 19, 1250, 0.65));
             break;
         case 5:
-            io.to(roomId).emit('alert_warning', "Wave 5 (25 enemies)");
-            gameState[roomId].totalAliens = 25;
+            io.to(roomId).emit('alert_warning', "Wave 5");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 20;
             timeouts.push(setTimeout(() => {
-                spawnAlien(roomId, 0.6, "I", 20, "Goldy"); // roomId, speed, specificWord, specificCoordX, specificType
+                spawnAlien(roomId, 0.6, "I", 15, "Goldy");
             }, 50));
             timeouts.push(setTimeout(() => {
-                spawnAlien(roomId, 0.6, "Love", 40, "Goldy");
+                spawnAlien(roomId, 0.6, "Love", 27, "Goldy");
+            }, 150));
+            timeouts.push(setTimeout(() => {
+                spawnAlien(roomId, 0.6, "CN321", 35, "Goldy");
             }, 250));
             timeouts.push(setTimeout(() => {
-                spawnAlien(roomId, 0.6, "CN321", 60, "Goldy");
-            }, 450));
-            timeouts.push(setTimeout(() => {
-                spawnAlien(roomId, 0.6, "I", 30, "Goldy");
-            }, 850));
-            timeouts.push(setTimeout(() => {
-                spawnAlien(roomId, 0.6, "Love", 50, "Goldy");
-            }, 1050));
-            timeouts.push(setTimeout(() => {
-                spawnAlien(roomId, 0.6, "CN321", 70, "Goldy");
-            }, 1250));
-            timeouts.push(setTimeout(() => {
-                spawnAlien(roomId, 0.6, "I", 40, "Goldy");
-            }, 1650));
-            timeouts.push(setTimeout(() => {
-                spawnAlien(roomId, 0.6, "Love", 60, "Goldy");
-            }, 1850));
-            timeouts.push(setTimeout(() => {
-                spawnAlien(roomId, 0.6, "CN321", 80, "Goldy");
-            }, 2050));
-            timeouts.push(setTimeout(() => {
-                sAWD.push(spawnAlienWithDelay(roomId, 16, 1200, 0.7));
-            }, 2700));
+                sAWD.push(spawnAlienWithDelay(roomId, 17, 1200, 0.7));
+            }, 500));
             break;
         case 6:
-            io.to(roomId).emit('alert_warning', "Wave 6 (25 enemies)");
+            io.to(roomId).emit('alert_warning', "Wave 6");
+            io.to(roomId).emit("emit_sound", "clear");
             gameState[roomId].totalAliens = 25;
             sAWD.push(spawnAlienWithDelay(roomId, 25, 1200, 0.75));
             break;
         case 7:
-            io.to(roomId).emit('alert_warning', "Wave 7 (27 enemies)");
+            io.to(roomId).emit('alert_warning', "Wave 7");
+            io.to(roomId).emit("emit_sound", "clear");
             gameState[roomId].totalAliens = 27;
-            sAWD.push(spawnAlienWithDelay(roomId, 27, 1150, 0.8));
+            sAWD.push(spawnAlienWithDelay(roomId, 24, 1150, 0.8));
+            sAWD.push(spawnAlienWithDelay(roomId, 3, 6000, 0.6, null, "Mathy")); // roomId, amount, delay, speed, word=null, type=null
             break;
         case 8:
-            io.to(roomId).emit('alert_warning', "Wave 8 (30 enemies)");
+            io.to(roomId).emit('alert_warning', "Wave 8");
+            io.to(roomId).emit("emit_sound", "clear");
             gameState[roomId].totalAliens = 30;
-            sAWD.push(spawnAlienWithDelay(roomId, 30, 1150, 0.85));
+            sAWD.push(spawnAlienWithDelay(roomId, 27, 1150, 0.85));
+            sAWD.push(spawnAlienWithDelay(roomId, 3, 6000, 0.65, null, "Mathy"));
             break;
         case 9:
-            io.to(roomId).emit('alert_warning', "Wave 9 (35 enemies)");
+            io.to(roomId).emit('alert_warning', "Wave 9");
+            io.to(roomId).emit("emit_sound", "clear");
             gameState[roomId].totalAliens = 35;
-            sAWD.push(spawnAlienWithDelay(roomId, 35, 1100, 0.9));
+            sAWD.push(spawnAlienWithDelay(roomId, 30, 1100, 0.9));
+            sAWD.push(spawnAlienWithDelay(roomId, 5, 5555, 0.7, null, "Mathy"));
             break;
         case 10:
-            io.to(roomId).emit('alert_warning', "Wave 10 (5 enemies, FAST!)");
+            io.to(roomId).emit('alert_warning', "Wave 10");
+            io.to(roomId).emit("emit_sound", "clear");
             gameState[roomId].totalAliens = 5;
-            sAWD.push(spawnAlienWithDelay(roomId, 5, 1100, 5, "Lancey"));
+            sAWD.push(spawnAlienWithDelay(roomId, 5, 1100, 5, null, "Lancey"));
             break;
         case 11:
-            io.to(roomId).emit('alert_warning', "Wave 11 (16 enemies)");
+            io.to(roomId).emit('alert_warning', "Wave 11");
+            io.to(roomId).emit("emit_sound", "clear");
             gameState[roomId].totalAliens = 16;
             sAWD.push(spawnAlienWithDelay(roomId, 16, 800, 1));
             break;
         case 12:
-            io.to(roomId).emit('alert_warning', "Wave 12 (17 enemies)");
+            io.to(roomId).emit('alert_warning', "Wave 12");
+            io.to(roomId).emit("emit_sound", "clear");
             gameState[roomId].totalAliens = 17;
-            sAWD.push(spawnAlienWithDelay(roomId, 10, 790, 1.05));
-            sAWD.push(spawnAlienWithDelay(roomId, 7, 1333, 1.05, null, "Morphy"));
+            sAWD.push(spawnAlienWithDelay(roomId, 16, 790, 1.05));
+            sAWD.push(spawnAlienWithDelay(roomId, 1, 1333, 0.7, null, "Morphy"));
             break;
         case 13:
-            io.to(roomId).emit('alert_warning', "Wave 13 (18 enemies)");
+            io.to(roomId).emit('alert_warning', "Wave 13");
+            io.to(roomId).emit("emit_sound", "clear");
             gameState[roomId].totalAliens = 18;
-            sAWD.push(spawnAlienWithDelay(roomId, 18, 780, 1.1));
+            sAWD.push(spawnAlienWithDelay(roomId, 16, 780, 1.1));
+            sAWD.push(spawnAlienWithDelay(roomId, 2, 1233, 0.75, null, "Morphy"));
             break;
         case 14:
-            io.to(roomId).emit('alert_warning', "Wave 14 (19 enemies)");
+            io.to(roomId).emit('alert_warning', "Wave 14");
+            io.to(roomId).emit("emit_sound", "clear");
             gameState[roomId].totalAliens = 19;
-            sAWD.push(spawnAlienWithDelay(roomId, 19, 770, 1.15));
+            sAWD.push(spawnAlienWithDelay(roomId, 16, 770, 1.15));
+            sAWD.push(spawnAlienWithDelay(roomId, 3, 1213, 0.8, null, "Morphy"));
             break;
         case 15:
-            io.to(roomId).emit('alert_warning', "Wave 15 (20 enemies)");
+            io.to(roomId).emit('alert_warning', "Wave 15");
+            io.to(roomId).emit("emit_sound", "clear");
             gameState[roomId].totalAliens = 20;
             timeouts.push(setTimeout(() => {
                 spawnAlien(roomId, 1.2, "I", 20, "Goldy");
@@ -1595,105 +1914,575 @@ function startWave(roomId, waveNumber) {
             sAWD.push(spawnAlienWithDelay(roomId, 11, 770, 1.2));
             break;
         case 16:
-            io.to(roomId).emit('alert_warning', "Wave 16 (25 enemies, 1-10 !!!)");
+            io.to(roomId).emit('alert_warning', "Wave 16");
+            io.to(roomId).emit("emit_sound", "clear");
             gameState[roomId].totalAliens = 25;
             timeouts.push(setTimeout(() => {
                 timeouts.push(setTimeout(() => {
-                    spawnAlien(roomId, 2.6, "1", 3, "Goldy");
+                    spawnAlien(roomId, 1.5, "1", 3, "Goldy");
                 }, 50));
                 timeouts.push(setTimeout(() => {
-                    spawnAlien(roomId, 2.6, "2", 13, "Goldy");
+                    spawnAlien(roomId, 1.5, "2", 13, "Goldy");
                 }, 100));
                 timeouts.push(setTimeout(() => {
-                    spawnAlien(roomId, 2.6, "3", 23, "Goldy");
+                    spawnAlien(roomId, 1.5, "3", 23, "Goldy");
                 }, 150));
                 timeouts.push(setTimeout(() => {
-                    spawnAlien(roomId, 2.6, "4", 33, "Goldy");
+                    spawnAlien(roomId, 1.5, "4", 33, "Goldy");
                 }, 200));
                 timeouts.push(setTimeout(() => {
-                    spawnAlien(roomId, 2.6, "5", 43, "Goldy");
+                    spawnAlien(roomId, 1.5, "5", 43, "Goldy");
                 }, 250));
                 timeouts.push(setTimeout(() => {
-                    spawnAlien(roomId, 2.6, "6", 53, "Goldy");
+                    spawnAlien(roomId, 1.5, "6", 53, "Goldy");
                 }, 300));
                 timeouts.push(setTimeout(() => {
-                    spawnAlien(roomId, 2.6, "7", 63, "Goldy");
+                    spawnAlien(roomId, 1.5, "7", 63, "Goldy");
                 }, 350));
                 timeouts.push(setTimeout(() => {
-                    spawnAlien(roomId, 2.6, "8", 73, "Goldy");
+                    spawnAlien(roomId, 1.5, "8", 73, "Goldy");
                 }, 400));
                 timeouts.push(setTimeout(() => {
-                    spawnAlien(roomId, 2.6, "9", 83, "Goldy");
+                    spawnAlien(roomId, 1.5, "9", 83, "Goldy");
                 }, 450));
                 timeouts.push(setTimeout(() => {
-                    spawnAlien(roomId, 2.6, "10", 93, "Goldy");
+                    spawnAlien(roomId, 1.5, "10", 93, "Goldy");
                 }, 500));
             }, 500));
             sAWD.push(spawnAlienWithDelay(roomId, 15, 770, 1.3));
             break;
         case 17:
-            io.to(roomId).emit('alert_warning', "Wave 17 (25 enemies)");
+            io.to(roomId).emit('alert_warning', "Wave 17");
+            io.to(roomId).emit("emit_sound", "clear");
             gameState[roomId].totalAliens = 25;
-            sAWD.push(spawnAlienWithDelay(roomId, 25, 750, 1.4));
+            sAWD.push(spawnAlienWithDelay(roomId, 20, 755, 1.4));
+            sAWD.push(spawnAlienWithDelay(roomId, 5, 1100, 5.5, null, "Lancey"));
             break;
         case 18:
-            io.to(roomId).emit('alert_warning', "Wave 18 (25 enemies)");
+            io.to(roomId).emit('alert_warning', "Wave 18");
+            io.to(roomId).emit("emit_sound", "clear");
             gameState[roomId].totalAliens = 25;
-            sAWD.push(spawnAlienWithDelay(roomId, 25, 700, 1.5));
+            sAWD.push(spawnAlienWithDelay(roomId, 20, 700, 1.5));
+            sAWD.push(spawnAlienWithDelay(roomId, 5, 1100, 5.6, null, "Lancey"));
             break;
         case 19:
-            io.to(roomId).emit('alert_warning', "Wave 19 (25 enemies)");
+            io.to(roomId).emit('alert_warning', "Wave 19");
+            io.to(roomId).emit("emit_sound", "clear");
             gameState[roomId].totalAliens = 25;
-            sAWD.push(spawnAlienWithDelay(roomId, 25, 700, 1.6));
+            sAWD.push(spawnAlienWithDelay(roomId, 20, 700, 1.6));
+            sAWD.push(spawnAlienWithDelay(roomId, 5, 1100, 5.7, null, "Lancey"));
             break;
         case 20:
-            io.to(roomId).emit('alert_warning', "Wave 20 (10 enemies, random string)");
+            io.to(roomId).emit('alert_warning', "Wave 20");
+            io.to(roomId).emit("emit_sound", "clear");
             gameState[roomId].totalAliens = 10;
             timeouts.push(setTimeout(() => {
                 timeouts.push(setTimeout(() => {
-                    spawnAlien(roomId, 1.5, getRandomString(4), 50, "Smoky");
+                    spawnAlien(roomId, 1.5, getRandomString(3), 9, "Smoky");
                 }, 1000));
                 timeouts.push(setTimeout(() => {
-                    spawnAlien(roomId, 1.5, getRandomString(4), 60, "Smoky");
+                    spawnAlien(roomId, 1.5, getRandomString(4), 18, "Smoky");
                 }, 2000));
                 timeouts.push(setTimeout(() => {
-                    spawnAlien(roomId, 1.5, getRandomString(4), 50, "Smoky");
+                    spawnAlien(roomId, 1.5, getRandomString(3), 27, "Smoky");
                 }, 3000));
                 timeouts.push(setTimeout(() => {
-                    spawnAlien(roomId, 1.5, getRandomString(4), 40, "Smoky");
+                    spawnAlien(roomId, 1.5, getRandomString(4), 36, "Smoky");
                 }, 4000));
                 timeouts.push(setTimeout(() => {
-                    spawnAlien(roomId, 1.5, getRandomString(4), 50, "Smoky");
+                    spawnAlien(roomId, 1.5, getRandomString(3), 45, "Smoky");
                 }, 5000));
                 timeouts.push(setTimeout(() => {
-                    spawnAlien(roomId, 1.5, getRandomString(4), 60, "Smoky");
+                    spawnAlien(roomId, 1.5, getRandomString(4), 54, "Smoky");
                 }, 6000));
                 timeouts.push(setTimeout(() => {
-                    spawnAlien(roomId, 1.5, getRandomString(4), 50, "Smoky");
+                    spawnAlien(roomId, 1.5, getRandomString(3), 63, "Smoky");
                 }, 7000));
                 timeouts.push(setTimeout(() => {
-                    spawnAlien(roomId, 1.5, getRandomString(4), 40, "Smoky");
+                    spawnAlien(roomId, 1.5, getRandomString(4), 72, "Smoky");
                 }, 8000));
                 timeouts.push(setTimeout(() => {
-                    spawnAlien(roomId, 1.5, getRandomString(4), 50, "Smoky");
+                    spawnAlien(roomId, 1.5, getRandomString(3), 81, "Smoky");
                 }, 9000));
                 timeouts.push(setTimeout(() => {
-                    spawnAlien(roomId, 1.5, getRandomString(10), 60, "Smoky");
+                    spawnAlien(roomId, 1.5, getRandomString(4), 90, "Smoky");
                 }, 10000));
             }, 500));
             break;
         case 21:
-            io.to(roomId).emit('alert_warning', "Wave 21 (8 enemies, FAST!!!)");
+            io.to(roomId).emit('alert_warning', "Wave 21");
+            io.to(roomId).emit("emit_sound", "clear");
             gameState[roomId].totalAliens = 8;
-            sAWD.push(spawnAlienWithDelay(roomId, 8, 1200, 6, "Lancey"));
+            sAWD.push(spawnAlienWithDelay(roomId, 8, 1200, 6, null, "Lancey"));
+            break;
+        case 22:
+            io.to(roomId).emit('alert_warning', "Wave 22");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 10;
+            sAWD.push(spawnAlienWithDelay(roomId, 5, 1200, 6, null, "Lancey"));
+            sAWD.push(spawnAlienWithDelay(roomId, 5, 1250, 1.5));
+            break;
+        case 23:
+            io.to(roomId).emit('alert_warning', "Wave 23");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 10;
+            sAWD.push(spawnAlienWithDelay(roomId, 5, 1200, 6, null, "Lancey"));
+            sAWD.push(spawnAlienWithDelay(roomId, 5, 1250, 1.5, null, "Morphy"));
+            break;
+        case 24:
+            io.to(roomId).emit('alert_warning', "Wave 24");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 10;
+            sAWD.push(spawnAlienWithDelay(roomId, 5, 1200, 6, null, "Lancey"));
+            sAWD.push(spawnAlienWithDelay(roomId, 5, 1250, 1.5, null, "Mathy"));
+            break;
+        case 25:
+            io.to(roomId).emit('alert_warning', "Wave 25");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 15;
+            sAWD.push(spawnAlienWithDelay(roomId, 5, 1200, 6, null, "Lancey"));
+            sAWD.push(spawnAlienWithDelay(roomId, 5, 1250, 1.5, null, "Mathy"));
+            sAWD.push(spawnAlienWithDelay(roomId, 5, 1330, 1.5, null, "Morphy"));
+            break;
+        case 26:
+            io.to(roomId).emit('alert_warning', "Wave 26");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 20;
+            sAWD.push(spawnAlienWithDelay(roomId, 10, 1141, 1.5));
+            sAWD.push(spawnAlienWithDelay(roomId, 5, 1250, 1.5, null, "Mathy"));
+            sAWD.push(spawnAlienWithDelay(roomId, 5, 1330, 1.5, null, "Morphy"));
+            break;
+        case 27:
+            io.to(roomId).emit('alert_warning', "Wave 27");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 25;
+            sAWD.push(spawnAlienWithDelay(roomId, 25, 500, 1.5));
+            break;
+        case 28:
+            io.to(roomId).emit('alert_warning', "Wave 28");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 20;
+            timeouts.push(setTimeout(() => {
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.5, getRandomString(4), 9, "Smoky");
+                }, 1000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.5, getRandomString(4), 18, "Smoky");
+                }, 2000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.5, getRandomString(4), 27, "Smoky");
+                }, 3000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.5, getRandomString(4), 36, "Smoky");
+                }, 4000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.5, getRandomString(4), 45, "Smoky");
+                }, 5000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.5, getRandomString(4), 54, "Smoky");
+                }, 6000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.5, getRandomString(4), 64, "Smoky");
+                }, 7000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.5, getRandomString(4), 72, "Smoky");
+                }, 8000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.5, getRandomString(4), 81, "Smoky");
+                }, 9000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.5, getRandomString(4), 90, "Smoky");
+                }, 10000));
+            }, 500));
+            sAWD.push(spawnAlienWithDelay(roomId, 10, 950, 1.5));
+            break;
+        case 29:
+            io.to(roomId).emit('alert_warning', "Wave 29");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 25;
+            sAWD.push(spawnAlienWithDelay(roomId, 5, 500, 1.5));
+            sAWD.push(spawnAlienWithDelay(roomId, 10, 1670, 6, null, "Lancey"));
+            sAWD.push(spawnAlienWithDelay(roomId, 10, 1780, 1.5, null, "Morphy"));
+            break;
+        case 30:
+            io.to(roomId).emit('alert_warning', "Wave 30");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 25;
+            sAWD.push(spawnAlienWithDelay(roomId, 11, 1670, 6, null, "Lancey"));
+            sAWD.push(spawnAlienWithDelay(roomId, 11, 1780, 1.5, null, "Morphy"));
+            sAWD.push(spawnAlienWithDelay(roomId, 3, 2215, 1.5, null, "Reavy"));
+            break;
+        case 31:
+            io.to(roomId).emit('alert_warning', "Wave 31");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 15;
+            sAWD.push(spawnAlienWithDelay(roomId, 15, 900, 1.5, null, "Reavy"));
+            break;
+        case 32:
+            io.to(roomId).emit('alert_warning', "Wave 32");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 25;
+            sAWD.push(spawnAlienWithDelay(roomId, 10, 1455, 1.5));
+            sAWD.push(spawnAlienWithDelay(roomId, 15, 1100, 1.5, null, "Reavy"));
+            break;
+        case 33:
+            io.to(roomId).emit('alert_warning', "Wave 33");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 25;
+            sAWD.push(spawnAlienWithDelay(roomId, 10, 1355, 6.1, null, "Lancey"));
+            sAWD.push(spawnAlienWithDelay(roomId, 15, 1100, 1.5, null, "Reavy"));
+            break;
+        case 34:
+            io.to(roomId).emit('alert_warning', "Wave 34");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 25;
+            sAWD.push(spawnAlienWithDelay(roomId, 10, 1255, 1.5, null, "Morphy"));
+            sAWD.push(spawnAlienWithDelay(roomId, 15, 1100, 1.5, null, "Reavy"));
+            break;
+        case 35:
+            io.to(roomId).emit('alert_warning', "Wave 35");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 40;
+            sAWD.push(spawnAlienWithDelay(roomId, 40, 800, 1.5, null, "Morphy"));
+            break;
+        case 36:
+            io.to(roomId).emit('alert_warning', "Wave 36");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 20;
+            sAWD.push(spawnAlienWithDelay(roomId, 20, 700, 6.2, null, "Lancey"));
+            break;
+        case 37:
+            io.to(roomId).emit('alert_warning', "Wave 37");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 30;
+            sAWD.push(spawnAlienWithDelay(roomId, 10, 775, 6.2, null, "Lancey"));
+            sAWD.push(spawnAlienWithDelay(roomId, 20, 610, 1.7));
+            break;
+        case 38:
+            io.to(roomId).emit('alert_warning', "Wave 38");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 20;
+            sAWD.push(spawnAlienWithDelay(roomId, 10, 775, 6.2, null, "Lancey"));
+            sAWD.push(spawnAlienWithDelay(roomId, 10, 810, 1.7, null, "Mathy"));
+            break;
+        case 39:
+            io.to(roomId).emit('alert_warning', "Wave 39");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 40;
+            sAWD.push(spawnAlienWithDelay(roomId, 25, 1115, 1.7, null, "Reavy"));
+            sAWD.push(spawnAlienWithDelay(roomId, 15, 1950, 1.7, null, "Mathy"));
+            break;
+        case 40:
+            io.to(roomId).emit('alert_warning', "Wave 40");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 45;
+            timeouts.push(setTimeout(() => {
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(5), 9, "Smoky");
+                }, 1000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(5), 18, "Smoky");
+                }, 4000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(5), 27, "Smoky");
+                }, 7000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(5), 36, "Smoky");
+                }, 10000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(5), 45, "Smoky");
+                }, 13000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(5), 54, "Smoky");
+                }, 16000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(5), 64, "Smoky");
+                }, 19000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(5), 72, "Smoky");
+                }, 22000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(5), 81, "Smoky");
+                }, 25000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(5), 90, "Smoky");
+                }, 10000));
+            }, 500));
+            timeouts.push(setTimeout(() => {
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 2, "2", 3, "Goldy");
+                }, 50));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 2, "3", 13, "Goldy");
+                }, 100));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 2, "5", 23, "Goldy");
+                }, 150));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 2, "7", 33, "Goldy");
+                }, 200));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 2, "11", 43, "Goldy");
+                }, 250));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 2, "13", 53, "Goldy");
+                }, 300));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 2, "17", 63, "Goldy");
+                }, 350));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 2, "19", 73, "Goldy");
+                }, 400));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 2, "23", 83, "Goldy");
+                }, 450));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 2, "29", 93, "Goldy");
+                }, 500));
+            }, 5000));
+            timeouts.push(setTimeout(() => {
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 2, "31", 93, "Goldy");
+                }, 50));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 2, "37", 83, "Goldy");
+                }, 100));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 2, "41", 73, "Goldy");
+                }, 150));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 2, "43", 63, "Goldy");
+                }, 200));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 2, "47", 53, "Goldy");
+                }, 250));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 2, "53", 43, "Goldy");
+                }, 300));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 2, "59", 33, "Goldy");
+                }, 350));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 2, "61", 23, "Goldy");
+                }, 400));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 2, "67", 13, "Goldy");
+                }, 450));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 2, "71", 3, "Goldy");
+                }, 500));
+            }, 15000));
+            timeouts.push(setTimeout(() => {
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 2, "73", 3, "Goldy");
+                }, 50));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 2, "79", 13, "Goldy");
+                }, 100));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 2, "83", 23, "Goldy");
+                }, 150));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 2, "89", 33, "Goldy");
+                }, 200));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 2, "97", 43, "Goldy");
+                }, 250));
+            }, 25000));
+            sAWD.push(spawnAlienWithDelay(roomId, 10, 3333, 1.7, null, "Mathy"));
+            break;
+        case 41:
+            io.to(roomId).emit('alert_warning', "Wave 41");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 45;
+            sAWD.push(spawnAlienWithDelay(roomId, 20, 1115, 1.7, null, "Reavy"));
+            sAWD.push(spawnAlienWithDelay(roomId, 15, 1931, 1.7, null, "Mathy"));
+            sAWD.push(spawnAlienWithDelay(roomId, 10, 2350, 1.7, null, "Morphy"));
+            break;
+        case 42:
+            io.to(roomId).emit('alert_warning', "Wave 42");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 6;
+            timeouts.push(setTimeout(() => {
+                spawnAlien(roomId, 0.85, "Lorem, ipsum dolor sit amet consectetur adipisicing elit. Magnam, atque?", 45, "Goldy");
+            }, 250));
+            timeouts.push(setTimeout(() => {
+                spawnAlien(roomId, 0.83, getRandomString(17), 55, "Smoky");
+            }, 8000));
+            timeouts.push(setTimeout(() => {
+                spawnAlien(roomId, 0.8, "Lorem, ipsum dolor sit amet consectetur adipisicing elit.", 45, "Goldy");
+            }, 16000));
+            timeouts.push(setTimeout(() => {
+                spawnAlien(roomId, 0.75, getRandomString(21), 55, "Smoky");
+            }, 24000));
+            timeouts.push(setTimeout(() => {
+                spawnAlien(roomId, 0.7, "Lorem, ipsum dolor sit amet.", 45, "Goldy");
+            }, 30000));
+            timeouts.push(setTimeout(() => {
+                spawnAlien(roomId, 0.65, getRandomString(25), 55, "Smoky");
+            }, 37000));
+            break;
+        case 43:
+            io.to(roomId).emit('alert_warning', "Wave 43");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 28;
+            timeouts.push(setTimeout(() => {
+                spawnAlien(roomId, 0.85, "Congratulations! You beat the game!", 45, "Goldy");
+            }, 250));
+            timeouts.push(setTimeout(() => {
+                spawnAlien(roomId, 0.85, "jk", 45, "Goldy");
+            }, 10000));
+            timeouts.push(setTimeout(() => {
+                spawnAlien(roomId, 0.85, "Now, DIE!", 45, "Goldy");
+            }, 13000));
+            timeouts.push(setTimeout(() => {
+                sAWD.push(spawnAlienWithDelay(roomId, 25, 500, 6.5, null, "Lancey"));
+            }, 14900));
+            break;
+        case 44:
+            io.to(roomId).emit('alert_warning', "Wave 44");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 37;
+            timeouts.push(setTimeout(() => {
+                spawnAlien(roomId, 0.85, "How did you survive that!?!?", 45, "Goldy");
+            }, 250));
+            timeouts.push(setTimeout(() => {
+                spawnAlien(roomId, 0.85, "Now, take this!", 45, "Goldy");
+            }, 10000));
+            timeouts.push(setTimeout(() => {
+                sAWD.push(spawnAlienWithDelay(roomId, 35, 630, 1.8, null, "Morphy"));
+            }, 16000));
+            break;
+        case 45:
+            io.to(roomId).emit('alert_warning', "Wave 45");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 30;
+            sAWD.push(spawnAlienWithDelay(roomId, 30, 540, 1.8, null, "Reavy"));
+            break;
+        case 46:
+            io.to(roomId).emit('alert_warning', "Wave 46");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 20;
+            timeouts.push(setTimeout(() => {
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(6), 9, "Smoky");
+                }, 1000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(6), 18, "Smoky");
+                }, 2000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(6), 27, "Smoky");
+                }, 3000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(6), 36, "Smoky");
+                }, 4000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(6), 45, "Smoky");
+                }, 5000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(6), 54, "Smoky");
+                }, 6000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(6), 64, "Smoky");
+                }, 7000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(6), 72, "Smoky");
+                }, 8000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(6), 81, "Smoky");
+                }, 9000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(6), 90, "Smoky");
+                }, 10000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(6), 9, "Smoky");
+                }, 11000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(6), 18, "Smoky");
+                }, 12000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(6), 27, "Smoky");
+                }, 13000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(6), 36, "Smoky");
+                }, 14000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(6), 45, "Smoky");
+                }, 15000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(6), 54, "Smoky");
+                }, 16000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(6), 64, "Smoky");
+                }, 17000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(6), 72, "Smoky");
+                }, 18000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(6), 81, "Smoky");
+                }, 19000));
+                timeouts.push(setTimeout(() => {
+                    spawnAlien(roomId, 1.7, getRandomString(6), 90, "Smoky");
+                }, 20000));
+            }, 500));
+            break;
+        case 47:
+            io.to(roomId).emit('alert_warning', "Wave 47");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 31;
+            timeouts.push(setTimeout(() => {
+                spawnAlien(roomId, 2, "Impossible!", 45, "Goldy");
+            }, 250));
+            timeouts.push(setTimeout(() => {
+            sAWD.push(spawnAlienWithDelay(roomId, 30, 1400, 1.3, null, "Mathy"));
+            }, 3500));
+            break;
+        case 48:
+            io.to(roomId).emit('alert_warning', "Wave 48");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 55;
+            sAWD.push(spawnAlienWithDelay(roomId, 50, 850, 2.1));
+            timeouts.push(setTimeout(() => {
+                spawnAlien(roomId, 1, getRandomString(10), 50, "Smoky");
+            }, 10070));
+            timeouts.push(setTimeout(() => {
+                spawnAlien(roomId, 1, "Guardian of the Typurr", 50, "Reavy");
+            }, 20070));
+            timeouts.push(setTimeout(() => {
+                spawnAlien(roomId, 1, "AbcdEfGhIjKlmNopqrStuvWXYz", 50, "Reavy");
+            }, 30070));
+            timeouts.push(setTimeout(() => {
+                spawnAlien(roomId, 0.5, getRandomString(40), 50, "Smoky");
+            }, 40070));
+            timeouts.push(setTimeout(() => {
+                spawnAlien(roomId, 3, "eh...", 50, "Goldy");
+            }, 50070));
+            break;
+        case 49:
+            io.to(roomId).emit('alert_warning', "Wave 49");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 20;
+            sAWD.push(spawnAlienWithDelay(roomId, 20, 900, 8.7, null, "Lancey"));
+            break;
+        case 50:
+            io.to(roomId).emit('alert_warning', "Wave 50");
+            io.to(roomId).emit("emit_sound", "clear");
+            gameState[roomId].totalAliens = 2;
+            timeouts.push(setTimeout(() => {
+                spawnAlien(roomId, 1, "Ok, that is it for real, thanks for playing!", 50, "Goldy");
+            }, 400));
+            timeouts.push(setTimeout(() => {
+                spawnAlien(roomId, 20, "xD", 50, "Goldy");
+            }, 12000));
             break;
         default:
             // If no more waves are defined, end the game
             io.to(roomId).emit('alert_warning', "Final Wave Completed!");
+            io.to(roomId).emit("emit_sound", "clear");
             cancelAllAlienTimeoutsInRoom(roomId);
             gameState[roomId].gameOver = true;
             io.to(roomId).emit('game_over');
-            console.log(`Game over in room ${roomId}.`);
+            console.log(`❌ Game over in room ${roomId}.`);
             break;
     }
 }
