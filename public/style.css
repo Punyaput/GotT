@@ -493,6 +493,7 @@ button:disabled {
     max-width: 25%;
     word-wrap: break-word;
     transition: background-color 0.5s;
+    pointer-events: none;
 }
 
 /* Name display below the player */
@@ -511,6 +512,7 @@ button:disabled {
     max-width: 20%;
     word-wrap: break-word;
     max-height: 16px;
+    pointer-events: none;
 }
 /* Input cd */
 .input-cd-frame {
