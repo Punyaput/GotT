@@ -17,8 +17,6 @@ function setName() {
     playerName = document.getElementById("player-name").value;
     if (playerName) {
         socket.emit("set_name", { name: playerName });
-        document.getElementById("name-form").style.display = "none";
-        document.getElementById("lobby").style.display = "flex";
     }
 }
 
@@ -302,7 +300,8 @@ socket.on("game_started", (data) => {
     // Add the input box
     const inputBox = document.createElement("input");
     inputBox.id = "input-box";
-    inputBox.autocomplete = "off"; // new-password autocomplete disable t
+    inputBox.autocomplete = "off"; // new-password autocomplete disable
+    inputBox.maxLength = "100";
     inputBox.placeholder = "Type words here!";
     gameContainer.appendChild(inputBox);
 
@@ -620,6 +619,11 @@ function setDisplayName(playerId) {
     socket.emit('request_name_display', playerId);
 }
 
+socket.on('name_set', () => {
+    document.getElementById("name-form").style.display = "none";
+    document.getElementById("lobby").style.display = "flex";
+});
+
 socket.on('received_name_to_display', (data) => {
     const playerId = data.id;
     const playerName1 = data.name;
@@ -888,8 +892,10 @@ function playSoundClick() {
 }
 
 socket.on("reset_visual1", () => {
-    document.getElementById("game-screen").style.display = "none";
-    document.getElementById("lobby").style.display = "none";
-    document.getElementById("player-name").value = "";
-    document.getElementById("name-form").style.display = "flex";
+    window.onload = function() {
+        document.getElementById("game-screen").style.display = "none";
+        document.getElementById("lobby").style.display = "none";
+        document.getElementById("player-name").value = "";
+        document.getElementById("name-form").style.display = "flex";
+    }
 })
