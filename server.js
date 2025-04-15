@@ -114,14 +114,14 @@ io.on('connection', (socket) => {
             return;
         }
 
-        if (data.name.length > 100) {
-            socket.emit('error', { message: 'Name too long. (100 Characters limit)' });
+        if (data.name.length > 30) {
+            socket.emit('error', { message: 'Name too long. (30 Characters limit)' });
             return;
         }
 
         if (players[playerId].name === "") {
         players[playerId].name = data.name;
-        socket.emit('name_set', { name: data.name });
+        socket.emit('name_set');
         }
         else {
             socket.emit('error', { message: 'You already have a name!' });
