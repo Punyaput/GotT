@@ -877,13 +877,12 @@ function closeHowToPlayIG() {
     document.getElementById('howToPlayModalIG').style.display = 'none';
 }
 
-// function adjustHeight() {
-//     document.body.style.height = `${window.visualViewport.height}px`;
-//     document.getElementById("star-container").style.height = `${window.visualViewport.height}px`;
-// }
+function adjustHeight() {
+    document.body.style.height = `${window.visualViewport.height}px`;
+}
 
-// window.addEventListener("resize", adjustHeight);
-// window.addEventListener("scroll", adjustHeight);
+window.addEventListener("resize", adjustHeight);
+window.addEventListener("scroll", adjustHeight);
 
 socket.on("display_disconnected", (data) => {
     document.getElementById("disconnectScreenSpam").style.display = "flex";
