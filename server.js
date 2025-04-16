@@ -1429,7 +1429,6 @@ function updateRoomList() {
             roomHead: headName
         };
     }
-    console.log(roomList)
     io.emit('room_list', roomList);
 }
 
