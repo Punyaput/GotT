@@ -445,7 +445,7 @@ io.on('connection', (socket) => {
             }
 
             io.to(roomId).emit('game_started', rooms[roomId]);
-            socket.emit('request_client_color_input_change')
+            io.to(roomId).emit('request_client_color_input_change');
 
             const characterList = rooms[roomId].players.map(playerId => ({
                 id: playerId,
