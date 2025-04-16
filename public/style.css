@@ -35,10 +35,10 @@ h1, h2, h3 {
 }
 .room {
     background: rgba(255, 255, 255, 0.1);
-    padding: 20px;
+    padding: 15px 20px 20px 20px;
     border-radius: 10px;
     width: 200px;
-    height: 130px;
+    height: 140px;
     text-align: center;
     box-shadow: 0 0 10px rgba(233, 69, 96, 0.5); /* Glow effect */
     transition: transform 0.2s, box-shadow 0.2s;
@@ -51,6 +51,12 @@ h1, h2, h3 {
 .room p {
     font-size: 16px;
     margin-bottom: 10px;
+    margin-top: 10px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    word-wrap: break-word;
+    max-width: 100%;
 }
 .room button {
     width: 100%;
@@ -510,9 +516,10 @@ button:disabled {
     color: #fff;
     box-shadow: 0 0 10px rgba(233, 69, 96, 0.5); /* Glow effect */
     max-width: 20%;
-    word-wrap: break-word;
     max-height: 16px;
     pointer-events: none;
+    text-overflow: ellipsis;
+    overflow: hidden;
 }
 /* Input cd */
 .input-cd-frame {
