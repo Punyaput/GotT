@@ -143,7 +143,7 @@ socket.on("player_list", (players) => {
             ? `<div class="blank-button"></div>`
             : "";
         const chosenCatIcon = `<div class="chosen-cat" id="chosen-cat-${player.id}"> <img class="character-image2" src="./images/cats/${player.character}TN1.png"> </div>`
-
+        
         // Prevent XSS
         const playerName = document.createElement('div');
         playerName.classList.add('player-name'); 
@@ -157,6 +157,7 @@ socket.on("player_list", (players) => {
             ${crownDisplay}
             ${blankButton}
         `;
+        
         playerList.appendChild(playerDiv);
         
         if (player.id == socket.id) {
@@ -877,29 +878,28 @@ function closeHowToPlayIG() {
     document.getElementById('howToPlayModalIG').style.display = 'none';
 }
 
+socket.on("disconnect", (reason) => {
+    if (!reason) {reason = 'Normal disconnect'}
+    document.getElementById("disconnectScreen").style.display = "flex";
+
+    setTimeout(() => {
+        location.reload();
+    }, 5000);
+})
+
+socket.on("force_reload", () => {
+    location.reload();
+});
+
+function playSoundClick() {
+    const sfxClick = new Audio('./sounds/click.mp3');
+    sfxClick.volume = 0.5; // Set volume (0.0 to 1.0)
+    sfxClick.play();
+}
+
 function adjustHeight() {
     document.body.style.height = `${window.visualViewport.height}px`;
 }
 
 window.addEventListener("resize", adjustHeight);
 window.addEventListener("scroll", adjustHeight);
-
-socket.on("display_disconnected", (data) => {
-    document.getElementById("disconnectScreenSpam").style.display = "flex";
-    document.getElementById("disconnectReason").innerText = "Reason: " + data.reason;
-});
-
-function playSoundClick() {
-    const sfxShoot = new Audio('./sounds/click.mp3');
-    sfxShoot.volume = 0.5; // Set volume (0.0 to 1.0)
-    sfxShoot.play();
-}
-
-socket.on("reset_visual1", () => {
-    window.onload = function() {
-        document.getElementById("game-screen").style.display = "none";
-        document.getElementById("lobby").style.display = "none";
-        document.getElementById("player-name").value = "";
-        document.getElementById("name-form").style.display = "flex";
-    }
-})
