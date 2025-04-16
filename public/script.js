@@ -144,9 +144,14 @@ socket.on("player_list", (players) => {
             : "";
         const chosenCatIcon = `<div class="chosen-cat" id="chosen-cat-${player.id}"> <img class="character-image2" src="./images/cats/${player.character}TN1.png"> </div>`
 
+        // Prevent XSS
+        const playerName = document.createElement('div');
+        playerName.classList.add('player-name'); 
+        playerName.innerText = player.name;
+
         playerDiv.innerHTML = `
             ${chosenCatIcon}
-            <div class="player-name">${player.name}</div>
+            ${playerName.outerHTML}
             <div id="ready-state" class="${player.ready ? "player-ready" : "player-not-ready"}">${player.ready ? "Ready" : "Await"}</div>
             ${kickButton}
             ${crownDisplay}
