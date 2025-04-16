@@ -95,6 +95,7 @@ socket.on("room_list", (rooms) => {
         roomDiv.innerHTML = 
         `
         <h3>${roomId}</h3>
+        <p>👑 ${rooms[roomId].roomHead}</p>
         <p>${rooms[roomId].playerCount} / 4 Players</p>
         <button onclick="joinRoom('${roomId}'), playSoundClick()" ${rooms.playerCount >= 4 || rooms.gameInProgress ? "disabled" : ""}>Join</button>
         `;
