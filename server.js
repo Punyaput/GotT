@@ -104,8 +104,6 @@ io.on('connection', (socket) => {
     players[playerId] = { name: "", room_id: null, ready: false , character: "Nulla", cooldown: null }; // Initialize player data
     console.log(`✅ Player ${playerId} connected.`);
 
-    socket.emit("reset_visual1");
-
     socket.on('set_name', (data) => {
 
         // VALIDATE DATA (VERY IMPORTANT!!!)
@@ -688,7 +686,6 @@ io.on('connection', (socket) => {
                     socket.emit('error', { 
                         message: 'Disconnected for excessive spamming' 
                     });
-                    socket.emit("display_disconnected", {reason : "Spamming"});
                     console.log(`🚫 Disconnected ${socketId} for spamming`);
                     socket.disconnect(true);
                     clientRateLimits.delete(socketId);
