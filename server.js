@@ -1421,12 +1421,15 @@ io.on('connection', (socket) => {
 function updateRoomList() {
     const roomList = {};
     for (const [roomId, room] of Object.entries(rooms)) {
+        const headId = room.head;
+        const headName = players[headId]?.name || "Unknown"; // fallback in case headId is missing
         roomList[roomId] = {
             playerCount: room.players.length,
-            gameInProgress: room.game_in_progress || false // Include GameInProgress status
+            gameInProgress: room.game_in_progress || false, // Include GameInProgress status
+            roomHead: headName
         };
     }
-    
+    console.log(roomList)
     io.emit('room_list', roomList);
 }
 
