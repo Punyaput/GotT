@@ -17,7 +17,7 @@
         <img class="first-logo" src="./images/Logo1.png">
         <h1>Guardian of the Typurr</h1>
         <div class="name-and-play-container">
-            <input type="text" autocomplete="off" id="player-name" placeholder="Enter your name" maxlength="30">
+            <input onkeydown="if(event.key === 'Enter') setName(), playSoundClick()" type="text" autocomplete="off" id="player-name" placeholder="Enter your name" maxlength="30">
             <button onclick="setName(), playSoundClick()">Play</button>
         </div>
         <button class="how-to-play-btn" onclick="openHowToPlay(), playSoundClick()">How to play</button>
@@ -230,9 +230,8 @@
 
     <div id="star-container" class="star-container"></div>
 
-    <div id="disconnectScreenSpam" class="disconnected-screen" style="display:none">
+    <div id="disconnectScreen" class="disconnected-screen" style="display:none">
         <span id="disconnectHead">Disconneted</span>
-        <span id="disconnectReason">Reason: ---</span>
     </div>
 </body>
 </html>
