@@ -835,7 +835,7 @@ button:disabled {
     width: 100%;
     max-width: clamp(300px, 50%, 500px); 
     color: white;
-    padding: 1.5rem;
+    padding: 2rem 3rem 1rem 3rem;
     max-height: 85dvh;
     overflow-y: auto;
     scrollbar-width: none;
@@ -921,8 +921,8 @@ button:disabled {
 }
 .close-button {
     position: absolute;
-    top: 1rem;
-    right: 1rem;
+    top: -1.5rem;
+    right: -2.4rem;
     cursor: pointer;
     font-size: 1.5rem;
     color: white;
@@ -931,7 +931,7 @@ button:disabled {
     padding: 0.25rem 0.5rem;
     border-radius: 0.5rem;
     backdrop-filter: blur(5px);
-  }
+}
 
 .name-Nulla {
     color: #ffffff; 
@@ -1018,4 +1018,11 @@ button:disabled {
     flex-direction: column;
     font-size: 50px;
     text-shadow: 0 0 10px #ffffff, 0 0 20px #ffffff;
+}
+
+.close-btn-cover {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    z-index: 10000;
 }
