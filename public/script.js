@@ -92,10 +92,14 @@ socket.on("room_list", (rooms) => {
             roomDiv.classList.add("in-progress");
         }
 
+        // Prevent XSS
+        const headName = document.createElement('p');
+        headName.innerText = "👑 " + rooms[roomId].roomHead;
+
         roomDiv.innerHTML = 
         `
         <h3>${roomId}</h3>
-        <p>👑 ${rooms[roomId].roomHead}</p>
+        ${headName.outerHTML}
         <p>${rooms[roomId].playerCount} / 4 Players</p>
         <button onclick="joinRoom('${roomId}'), playSoundClick()" ${rooms.playerCount >= 4 || rooms.gameInProgress ? "disabled" : ""}>Join</button>
         `;
