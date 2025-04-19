@@ -1779,7 +1779,7 @@ function startWave(roomId, waveNumber) {
 
     switch (waveNumber) {
         case 1:
-            io.to(roomId).emit('alert_warning', "Wave 1 (10 enemies)");
+            io.to(roomId).emit('alert_warning', "Wave 1");
             io.to(roomId).emit("emit_sound", "start");
             gameState[roomId].totalAliens = 10;
             sAWD.push(spawnAlienWithDelay(roomId, 10, 1500, 0.5)); // roomId, amount, delay, speed, word=null, type=null
